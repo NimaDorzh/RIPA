@@ -1,0 +1,9 @@
+build/
+install/
+log/
+venv/
+*.deb
+__pycache__/
+*.pyc
+.env
+EOF
