@@ -1,3 +1,6 @@
+import os
+from glob import glob
+
 from setuptools import find_packages
 from setuptools import setup
 
@@ -15,6 +18,7 @@ setup(
             [f"resource/{package_name}"],
         ),
         (f"share/{package_name}", ["package.xml"]),
+        (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
     ],
     install_requires=["setuptools", "openai>=1.0.0"],
     zip_safe=True,
