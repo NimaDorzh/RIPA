@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from typing import Optional
 
 from geometry_msgs.msg import Twist
@@ -15,19 +16,80 @@ SYSTEM_PROMPT = (
     "return only one command: MOVE_ZONE_A or MOVE_ZONE_B"
 )
 
+LLM_TARGETS = {
+    "openai": {
+        "api_key_env": "OPENAI_API_KEY",
+        "base_url": "",
+        "model": "gpt-4o",
+    },
+    "deepseek": {
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat",
+    },
+}
+
+
+def load_env_file() -> None:
+    checked_paths = set()
+
+    for base_path in (Path.cwd(), Path(__file__).resolve().parent):
+        for directory in (base_path, *base_path.parents):
+            env_path = directory / ".env"
+            if env_path in checked_paths or not env_path.is_file():
+                continue
+
+            checked_paths.add(env_path)
+
+            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
+                line = raw_line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+
+                key, value = line.split("=", 1)
+                key = key.strip()
+                value = value.strip().strip('"').strip("'")
+                if key:
+                    os.environ.setdefault(key, value)
+            return
+
 
 class LlmRobotController(Node):
     def __init__(self) -> None:
         super().__init__("llm_robot_controller")
 
-        api_key = os.getenv("OPENAI_API_KEY")
+        load_env_file()
+
+        default_target = os.getenv("TARGET_LLM", "deepseek").strip().lower()
+        self.declare_parameter("target_llm", default_target)
+        self.target_llm = self.get_parameter("target_llm").get_parameter_value().string_value.lower()
+
+        if self.target_llm not in LLM_TARGETS:
+            supported_targets = ", ".join(sorted(LLM_TARGETS))
+            raise RuntimeError(
+                f"Unsupported target_llm '{self.target_llm}'. Supported values: {supported_targets}"
+            )
+
+        target_config = LLM_TARGETS[self.target_llm]
+        default_model = os.getenv("TARGET_LLM_MODEL", target_config["model"])
+        default_base_url = os.getenv("TARGET_LLM_BASE_URL", target_config["base_url"])
+
+        self.declare_parameter("llm_model", default_model)
+        self.model = self.get_parameter("llm_model").get_parameter_value().string_value
+
+        self.declare_parameter("llm_base_url", default_base_url)
+        self.base_url = self.get_parameter("llm_base_url").get_parameter_value().string_value
+
+        api_key = os.getenv("TARGET_LLM_API_KEY") or os.getenv(target_config["api_key_env"])
         if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is not set")
+            raise RuntimeError(
+                f"{target_config['api_key_env']} is not set. Add it to .env or export it in the environment"
+            )
 
-        self.declare_parameter("openai_model", "gpt-4o")
-        self.model = self.get_parameter("openai_model").get_parameter_value().string_value
-
-        self.client = OpenAI(api_key=api_key)
+        if self.base_url:
+            self.client = OpenAI(api_key=api_key, base_url=self.base_url)
+        else:
+            self.client = OpenAI(api_key=api_key)
         self.cmd_vel_publisher = self.create_publisher(Twist, "/cmd_vel", 10)
         self.object_label_subscription = self.create_subscription(
             String,
@@ -37,7 +99,7 @@ class LlmRobotController(Node):
         )
 
         self.get_logger().info(
-            f"Listening on /object_label and publishing to /cmd_vel with model {self.model}"
+            f"Listening on /object_label and publishing to /cmd_vel with target {self.target_llm}, model {self.model}"
         )
 
     def object_label_callback(self, msg: String) -> None:
@@ -52,7 +114,7 @@ class LlmRobotController(Node):
         try:
             llm_command = self.query_llm(label)
         except OpenAIError as exc:
-            self.get_logger().error(f"OpenAI API request failed: {exc}")
+            self.get_logger().error(f"LLM API request failed: {exc}")
             self.publish_command(None)
             return
         except Exception as exc:
