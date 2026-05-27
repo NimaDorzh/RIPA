@@ -30,6 +30,8 @@ setup(
     entry_points={
         "console_scripts": [
             "controller_node = llm_robot_controller.controller_node:main",
+            "firewall_node = llm_robot_controller.firewall_node:main",
+            "firewall_test = llm_robot_controller.firewall_test:main",
             "injection_test = llm_robot_controller.injection_test:main",
         ],
     },
