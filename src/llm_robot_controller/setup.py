@@ -30,6 +30,7 @@ setup(
     entry_points={
         "console_scripts": [
             "controller_node = llm_robot_controller.controller_node:main",
+            "injection_test = llm_robot_controller.injection_test:main",
         ],
     },
 )
