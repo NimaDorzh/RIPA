@@ -20,7 +20,7 @@ setup(
         (f"share/{package_name}", ["package.xml"]),
         (os.path.join("share", package_name, "launch"), glob("launch/*.launch.py")),
     ],
-    install_requires=["setuptools", "openai>=1.0.0", "python-dotenv>=1.0.0"],
+    install_requires=["setuptools", "openai>=1.0.0", "python-dotenv>=1.0.0", "matplotlib>=3.8.0"],
     zip_safe=True,
     maintainer="amin",
     maintainer_email="amin@example.com",
