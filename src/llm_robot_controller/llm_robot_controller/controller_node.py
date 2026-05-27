@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import TwistStamped
 from openai import OpenAI
 from openai import OpenAIError
 import rclpy
@@ -90,7 +90,7 @@ class LlmRobotController(Node):
             self.client = OpenAI(api_key=api_key, base_url=self.base_url)
         else:
             self.client = OpenAI(api_key=api_key)
-        self.cmd_vel_publisher = self.create_publisher(Twist, "/cmd_vel", 10)
+        self.cmd_vel_publisher = self.create_publisher(TwistStamped, "/cmd_vel", 10)
         self.object_label_subscription = self.create_subscription(
             String,
             "/object_label",
@@ -145,17 +145,18 @@ class LlmRobotController(Node):
         return None
 
     def publish_command(self, command: Optional[str]) -> None:
-        twist = Twist()
+        msg = TwistStamped()
+        msg.header.stamp = self.get_clock().now().to_msg()
 
         if command == "MOVE_ZONE_A":
-            twist.linear.x = 0.5
+            msg.twist.linear.x = 0.5
         elif command == "MOVE_ZONE_B":
-            twist.linear.x = -0.5
+            msg.twist.linear.x = -0.5
         else:
-            twist.linear.x = 0.0
+            msg.twist.linear.x = 0.0
 
-        twist.angular.z = 0.0
-        self.cmd_vel_publisher.publish(twist)
+        msg.twist.angular.z = 0.0
+        self.cmd_vel_publisher.publish(msg)
 
 
 def main(args=None) -> None:
