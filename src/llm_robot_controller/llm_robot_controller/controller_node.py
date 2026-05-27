@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 from geometry_msgs.msg import TwistStamped
 from openai import OpenAI
 from openai import OpenAIError
@@ -16,16 +17,16 @@ SYSTEM_PROMPT = (
     "return only one command: MOVE_ZONE_A or MOVE_ZONE_B"
 )
 
-LLM_TARGETS = {
-    "openai": {
-        "api_key_env": "OPENAI_API_KEY",
-        "base_url": "",
-        "model": "gpt-4o",
-    },
+LLM_PROVIDERS = {
     "deepseek": {
         "api_key_env": "DEEPSEEK_API_KEY",
         "base_url": "https://api.deepseek.com",
         "model": "deepseek-chat",
+    },
+    "together": {
+        "api_key_env": "TOGETHER_API_KEY",
+        "base_url": "https://api.together.ai/v1",
+        "model": "meta-llama/Llama-3.1-8B-Instruct-Turbo",
     },
 }
 
@@ -41,16 +42,7 @@ def load_env_file() -> None:
 
             checked_paths.add(env_path)
 
-            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-                line = raw_line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-
-                key, value = line.split("=", 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                if key:
-                    os.environ.setdefault(key, value)
+            load_dotenv(env_path, override=False)
             return
 
 
@@ -60,19 +52,19 @@ class LlmRobotController(Node):
 
         load_env_file()
 
-        default_target = os.getenv("TARGET_LLM", "deepseek").strip().lower()
-        self.declare_parameter("target_llm", default_target)
+        default_provider = os.getenv("LLM_PROVIDER", "deepseek").strip().lower() or "deepseek"
+        self.declare_parameter("target_llm", default_provider)
         self.target_llm = self.get_parameter("target_llm").get_parameter_value().string_value.lower()
 
-        if self.target_llm not in LLM_TARGETS:
-            supported_targets = ", ".join(sorted(LLM_TARGETS))
+        if self.target_llm not in LLM_PROVIDERS:
+            supported_targets = ", ".join(sorted(LLM_PROVIDERS))
             raise RuntimeError(
                 f"Unsupported target_llm '{self.target_llm}'. Supported values: {supported_targets}"
             )
 
-        target_config = LLM_TARGETS[self.target_llm]
-        default_model = os.getenv("TARGET_LLM_MODEL", target_config["model"])
-        default_base_url = os.getenv("TARGET_LLM_BASE_URL", target_config["base_url"])
+        target_config = LLM_PROVIDERS[self.target_llm]
+        default_model = os.getenv("LLM_MODEL", target_config["model"]).strip() or target_config["model"]
+        default_base_url = target_config["base_url"]
 
         self.declare_parameter("llm_model", default_model)
         self.model = self.get_parameter("llm_model").get_parameter_value().string_value
@@ -80,10 +72,11 @@ class LlmRobotController(Node):
         self.declare_parameter("llm_base_url", default_base_url)
         self.base_url = self.get_parameter("llm_base_url").get_parameter_value().string_value
 
-        api_key = os.getenv("TARGET_LLM_API_KEY") or os.getenv(target_config["api_key_env"])
+        api_key = os.getenv(target_config["api_key_env"], "").strip()
         if not api_key:
             raise RuntimeError(
-                f"{target_config['api_key_env']} is not set. Add it to .env or export it in the environment"
+                f"{target_config['api_key_env']} is not set for provider '{self.target_llm}'. "
+                "Add it to .env or export it in the environment"
             )
 
         if self.base_url:
@@ -99,7 +92,7 @@ class LlmRobotController(Node):
         )
 
         self.get_logger().info(
-            f"Listening on /object_label_safe and publishing to /cmd_vel with target {self.target_llm}, model {self.model}"
+            f"Listening on /object_label_safe and publishing to /cmd_vel with provider {self.target_llm}, model {self.model}"
         )
 
     def object_label_callback(self, msg: String) -> None:

@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 from typing import Optional
 
+from dotenv import load_dotenv
 from openai import OpenAI
 from openai import OpenAIError
 import rclpy
@@ -35,6 +36,18 @@ SYSTEM_PATTERN = re.compile(r"(?:^|\n)\s*System:", re.IGNORECASE)
 NEWLINE_UPPERCASE_PATTERN = re.compile(r"\n[A-Z][A-Za-z_]*\b")
 ZONE_A_PATTERN = re.compile(r"\bzone\s*a\b", re.IGNORECASE)
 ZONE_B_PATTERN = re.compile(r"\bzone\s*b\b", re.IGNORECASE)
+LLM_PROVIDERS = {
+    "deepseek": {
+        "api_key_env": "DEEPSEEK_API_KEY",
+        "base_url": "https://api.deepseek.com",
+        "model": "deepseek-chat",
+    },
+    "together": {
+        "api_key_env": "TOGETHER_API_KEY",
+        "base_url": "https://api.together.ai/v1",
+        "model": "meta-llama/Llama-3.1-8B-Instruct-Turbo",
+    },
+}
 
 
 def load_env_file() -> None:
@@ -48,16 +61,7 @@ def load_env_file() -> None:
 
             checked_paths.add(env_path)
 
-            for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-                line = raw_line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-
-                key, value = line.split("=", 1)
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                if key:
-                    os.environ.setdefault(key, value)
+            load_dotenv(env_path, override=False)
             return
 
 
@@ -67,14 +71,35 @@ class SemanticFirewallNode(Node):
 
         load_env_file()
 
-        self.declare_parameter("llm_model", os.getenv("DEEPSEEK_MODEL", "deepseek-chat"))
+        default_provider = os.getenv("LLM_PROVIDER", "deepseek").strip().lower() or "deepseek"
+        self.declare_parameter("llm_provider", default_provider)
+        self.provider = self.get_parameter("llm_provider").get_parameter_value().string_value.lower()
+
+        if self.provider not in LLM_PROVIDERS:
+            supported_providers = ", ".join(sorted(LLM_PROVIDERS))
+            raise RuntimeError(
+                f"Unsupported llm_provider '{self.provider}'. Supported values: {supported_providers}"
+            )
+
+        provider_config = LLM_PROVIDERS[self.provider]
+
+        default_model = os.getenv("LLM_MODEL", provider_config["model"]).strip() or provider_config["model"]
+
+        self.declare_parameter("llm_model", default_model)
         self.model = self.get_parameter("llm_model").get_parameter_value().string_value
 
-        self.declare_parameter("llm_base_url", "https://api.deepseek.com")
+        self.declare_parameter("llm_base_url", provider_config["base_url"])
         self.base_url = self.get_parameter("llm_base_url").get_parameter_value().string_value
 
-        self.api_key = os.getenv("DEEPSEEK_API_KEY", "").strip()
+        self.api_key_env = provider_config["api_key_env"]
+        self.api_key = os.getenv(self.api_key_env, "").strip()
         self.client: Optional[OpenAI] = None
+
+        if not self.api_key:
+            raise RuntimeError(
+                f"{self.api_key_env} is not set for provider '{self.provider}'. "
+                "Add it to .env or export it in the environment"
+            )
 
         self.safe_publisher = self.create_publisher(String, "/object_label_safe", 10)
         self.blocked_publisher = self.create_publisher(String, "/firewall_blocked", 10)
@@ -85,13 +110,9 @@ class SemanticFirewallNode(Node):
             10,
         )
 
-        if not self.api_key:
-            self.get_logger().warning(
-                "DEEPSEEK_API_KEY is not set. Suspect inputs will be blocked because stage 2 cannot call DeepSeek."
-            )
-
         self.get_logger().info(
-            "Listening on /object_label, publishing clean inputs to /object_label_safe and blocked inputs to /firewall_blocked"
+            "Listening on /object_label, publishing clean inputs to /object_label_safe and blocked inputs "
+            f"to /firewall_blocked with provider {self.provider}, model {self.model}"
         )
 
     def object_label_callback(self, msg: String) -> None:
@@ -156,7 +177,7 @@ class SemanticFirewallNode(Node):
 
         content = response.choices[0].message.content
         if not content:
-            raise RuntimeError("DeepSeek returned an empty classification response")
+            raise RuntimeError(f"Provider '{self.provider}' returned an empty classification response")
 
         normalized = content.strip().upper()
         match = re.search(r"\b(SAFE|MALICIOUS)\b", normalized)
@@ -170,7 +191,7 @@ class SemanticFirewallNode(Node):
             return self.client
 
         if not self.api_key:
-            raise RuntimeError("DEEPSEEK_API_KEY is not set")
+            raise RuntimeError(f"{self.api_key_env} is not set")
 
         self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
         return self.client
@@ -206,7 +227,7 @@ def main(args=None) -> None:
     except OpenAIError as exc:
         if rclpy.ok():
             temp_logger = get_logger("firewall_node")
-            temp_logger.error(f"DeepSeek client error: {exc}")
+            temp_logger.error(f"LLM client error: {exc}")
         raise
     finally:
         if node is not None:
