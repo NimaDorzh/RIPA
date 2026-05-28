@@ -52,6 +52,14 @@ def reshape_interleaved_image(msg: Image, channels: int) -> np.ndarray:
     return trimmed.reshape((msg.height, msg.width, channels))
 
 
+def decode_compressed_image(msg: Image, flags: int) -> np.ndarray | None:
+    buffer = np.frombuffer(msg.data, dtype=np.uint8)
+    if buffer.size == 0:
+        return None
+
+    return cv2.imdecode(buffer, flags)
+
+
 def image_message_to_grayscale(msg: Image) -> PilImage.Image:
     encoding = msg.encoding.lower()
 
@@ -74,8 +82,14 @@ def image_message_to_grayscale(msg: Image) -> PilImage.Image:
         cv_image = reshape_interleaved_image(msg, 2)
         bgr_image = cv2.cvtColor(cv_image, cv2.COLOR_YUV2BGR_YUYV)
         grayscale_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+    elif encoding in {"mjpeg", "jpeg", "jpg"}:
+        grayscale_image = decode_compressed_image(msg, cv2.IMREAD_GRAYSCALE)
+        if grayscale_image is None:
+            raise ValueError(f"Failed to decode compressed image for {msg.encoding!r}")
     else:
-        raise ValueError(f"Unsupported image encoding: {msg.encoding!r}")
+        grayscale_image = decode_compressed_image(msg, cv2.IMREAD_GRAYSCALE)
+        if grayscale_image is None:
+            raise ValueError(f"Unsupported image encoding: {msg.encoding!r}")
 
     return PilImage.fromarray(grayscale_image)
 

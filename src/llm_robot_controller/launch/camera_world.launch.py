@@ -19,7 +19,7 @@ def generate_launch_description() -> LaunchDescription:
                 "video_device": video_device,
                 "image_width": 1280,
                 "image_height": 720,
-                "pixel_format": "yuyv",
+                "pixel_format": "mjpeg",
                 "camera_frame_id": "camera",
                 "io_method": "mmap",
             }
