@@ -38,6 +38,7 @@ setup(
         "console_scripts": [
             "controller_node = llm_robot_controller.controller_node:main",
             "firewall_node = llm_robot_controller.firewall_node:main",
+            "firewall_bypass_test = llm_robot_controller.firewall_bypass_test:main",
             "firewall_test = llm_robot_controller.firewall_test:main",
             "injection_test = llm_robot_controller.injection_test:main",
             "ocr_node = llm_robot_controller.ocr_node:main",
