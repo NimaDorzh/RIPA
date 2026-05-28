@@ -42,6 +42,7 @@ setup(
             "injection_test = llm_robot_controller.injection_test:main",
             "ocr_node = llm_robot_controller.ocr_node:main",
             "ocr_test = llm_robot_controller.ocr_test:main",
+            "real_camera_test = llm_robot_controller.real_camera_test:main",
         ],
     },
 )

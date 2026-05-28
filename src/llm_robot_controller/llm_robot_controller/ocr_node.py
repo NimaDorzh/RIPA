@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
+import cv2
 from dotenv import load_dotenv
+import numpy as np
 from PIL import Image as PilImage
-from PIL import ImageOps
 import pytesseract
 import rclpy
 from rclpy.node import Node
@@ -30,41 +31,53 @@ def load_env_file() -> None:
             return
 
 
-def image_message_to_pil(msg: Image) -> PilImage.Image:
-    encoding = msg.encoding.lower()
-    mode_map = {
-        "rgb8": ("RGB", "RGB", 3),
-        "bgr8": ("RGB", "BGR", 3),
-        "rgba8": ("RGBA", "RGBA", 4),
-        "bgra8": ("RGBA", "BGRA", 4),
-        "mono8": ("L", "L", 1),
-        "8uc1": ("L", "L", 1),
-        "8uc3": ("RGB", "RGB", 3),
-        "8uc4": ("RGBA", "RGBA", 4),
-    }
+def reshape_interleaved_image(msg: Image, channels: int) -> np.ndarray:
+    expected_row_bytes = msg.width * channels
+    step = msg.step or expected_row_bytes
 
-    if encoding not in mode_map:
-        raise ValueError(f"Unsupported image encoding: {msg.encoding!r}")
-
-    mode, raw_mode, channels = mode_map[encoding]
-    expected_step = msg.width * channels
-    step = msg.step or expected_step
-    image = PilImage.frombuffer(
-        mode,
-        (msg.width, msg.height),
-        bytes(msg.data),
-        "raw",
-        raw_mode,
-        step,
-        1,
-    )
-
-    if step < expected_step:
+    if step < expected_row_bytes:
         raise ValueError(
-            f"Image step {step} is smaller than expected row width {expected_step} for {msg.encoding!r}"
+            f"Image step {step} is smaller than expected row width {expected_row_bytes} for {msg.encoding!r}"
         )
 
-    return image.copy()
+    buffer = np.frombuffer(msg.data, dtype=np.uint8)
+    expected_buffer_size = step * msg.height
+    if buffer.size < expected_buffer_size:
+        raise ValueError(
+            f"Image buffer has {buffer.size} bytes but {expected_buffer_size} are required for {msg.encoding!r}"
+        )
+
+    row_major = buffer[:expected_buffer_size].reshape((msg.height, step))
+    trimmed = row_major[:, :expected_row_bytes]
+    return trimmed.reshape((msg.height, msg.width, channels))
+
+
+def image_message_to_grayscale(msg: Image) -> PilImage.Image:
+    encoding = msg.encoding.lower()
+
+    if encoding == "bgr8":
+        cv_image = reshape_interleaved_image(msg, 3)
+        grayscale_image = cv2.cvtColor(cv_image, cv2.COLOR_BGR2GRAY)
+    elif encoding in {"rgb8", "8uc3"}:
+        cv_image = reshape_interleaved_image(msg, 3)
+        grayscale_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
+    elif encoding in {"rgba8", "8uc4"}:
+        cv_image = reshape_interleaved_image(msg, 4)
+        grayscale_image = cv2.cvtColor(cv_image, cv2.COLOR_RGBA2GRAY)
+    elif encoding == "bgra8":
+        cv_image = reshape_interleaved_image(msg, 4)
+        grayscale_image = cv2.cvtColor(cv_image, cv2.COLOR_BGRA2GRAY)
+    elif encoding in {"mono8", "8uc1"}:
+        cv_image = reshape_interleaved_image(msg, 1)
+        grayscale_image = cv_image[:, :, 0]
+    elif encoding in {"yuv422_yuy2", "yuyv", "yuv422"}:
+        cv_image = reshape_interleaved_image(msg, 2)
+        bgr_image = cv2.cvtColor(cv_image, cv2.COLOR_YUV2BGR_YUYV)
+        grayscale_image = cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
+    else:
+        raise ValueError(f"Unsupported image encoding: {msg.encoding!r}")
+
+    return PilImage.fromarray(grayscale_image)
 
 
 class OcrNode(Node):
@@ -84,8 +97,7 @@ class OcrNode(Node):
         timestamp = datetime.now(timezone.utc).isoformat()
 
         try:
-            image = image_message_to_pil(msg)
-            grayscale_image = ImageOps.grayscale(image)
+            grayscale_image = image_message_to_grayscale(msg)
             raw_text = pytesseract.image_to_string(grayscale_image, config=TESSERACT_CONFIG)
         except pytesseract.TesseractNotFoundError as exc:
             self.get_logger().error(f"Tesseract OCR binary not found at {timestamp}: {exc}")

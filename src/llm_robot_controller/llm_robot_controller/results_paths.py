@@ -15,10 +15,26 @@ def sanitize_filename_part(value: str) -> str:
     return sanitized or "unknown"
 
 
-def build_experiment_results_path(provider: str, started_at: datetime | None = None) -> Path:
+def extract_model_short_name(model_name: str) -> str:
+    normalized_model_name = model_name.strip()
+    if not normalized_model_name:
+        return "unknown"
+
+    tail = normalized_model_name.split("/")[-1]
+    model_parts = [part for part in re.split(r"[-_]+", tail) if part]
+    return model_parts[-1] if model_parts else tail
+
+
+def build_experiment_results_path(
+    provider: str,
+    model_name: str,
+    num_runs: int,
+    started_at: datetime | None = None,
+) -> Path:
     timestamp = (started_at or datetime.now()).strftime("%Y%m%d_%H%M%S")
     provider_token = sanitize_filename_part(provider)
-    return CSV_RESULTS_DIR / f"experiment_{provider_token}_{timestamp}.csv"
+    model_token = sanitize_filename_part(extract_model_short_name(model_name))
+    return CSV_RESULTS_DIR / f"experiment_{provider_token}_{model_token}_{num_runs}runs_{timestamp}.csv"
 
 
 def csv_matches_provider(path: Path, provider: str) -> bool:
