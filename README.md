@@ -1,329 +1,235 @@
-# RIPA: Prompt Injection Attacks on LLM-Controlled Robotic Systems
+# RIPA: Robotic Injection via Pipeline Attack
 
-RIPA is an empirical security study of prompt injection attacks against ROS 2 robots that route untrusted sensory inputs into an LLM-driven control loop. The project focuses on sensory-vector prompt injection: text observed in the environment, extracted by OCR, and forwarded through a robotics pipeline that can ultimately affect motion commands.
+**Empirical study of sensory-vector prompt injection attacks on ROS 2 LLM-controlled robots.**
 
-The current project state includes four completed phases:
+RIPA evaluates how adversarial text injected through a robot's physical sensors — camera, microphone, LiDAR — propagates through a ROS 2 pipeline and manipulates LLM-driven motion commands. The project covers three attack channels, five LLMs, a hybrid semantic firewall, and a firewall bypass taxonomy across 19 obfuscated payloads.
 
-1. Phase 1: Baseline injection attacks against DeepSeek-chat with 100% attack success rate.
-2. Phase 2: Hybrid semantic firewall defense with 0% attack success rate and 0% false positives.
-3. Phase 3: Multi-model testing with Llama 3 8B via Together AI, reducing baseline attack success to 67%.
-4. Phase 4: Visual injection pipeline with OCR, firewall mediation, and automated experiment logging.
+> Paper: *RIPA: Robotic Injection via Pipeline Attack* (preprint forthcoming)  
+> Code: https://github.com/NimaDorzh/RIPA
 
-Key outcomes so far:
+---
 
-- First empirical study in this workspace of sensory-vector prompt injection across a ROS 2 control pipeline.
-- Baseline attack success rate: DeepSeek 100%, Llama 67%.
-- Defense result: firewall reduced attack success to 0% with 0% false positives in the current experiments.
+## Key Results
 
-## 1. Project Overview
+| Channel | Vector | Models tested | ASR |
+|---------|--------|---------------|-----|
+| Channel 1 | Visual (OCR) | DeepSeek, Llama 3.1 8B, Llama 3.3 70B, Qwen 2.5 7B, Gemma-3n-4B | 67–100% |
+| Channel 2 | Audio (Whisper STT) | DeepSeek-chat | 97–100% per variant |
+| Channel 3 | LiDAR sensor context | DeepSeek-chat | 100% |
+| Firewall (known patterns) | — | Both models | 0% ASR, 0% false positives |
+| Firewall bypass (obfuscated) | 19 payloads, N=30 | Llama 3.3 70B (controller) | 52.6% bypass rate |
 
-This repository implements an end-to-end robotics security testbed for evaluating how prompt injection propagates from perception to actuation:
-- untrusted text appears in the robot environment;
-- OCR extracts that text into ROS 2 topics;
-- a semantic firewall filters malicious content;
-- a controller node queries an LLM;
-- the selected action is published to `/cmd_vel`.
+**Multi-model sweep (Channel 1, N=100 per variant via Together AI):**
 
-The focus is not only whether an LLM can be manipulated, but whether that manipulation survives the full ROS 2 pipeline and affects downstream robot behavior.
+| Model | Params | A1 | A2 | A3 | Overall |
+|-------|--------|----|----|----|---------|
+| DeepSeek-chat | ~67B (MoE) | 100% | 100% | 100% | 100% |
+| Llama-3.3-70B | 70B | 100% | 100% | 100% | 100% |
+| Qwen-2.5-7B | 7B | 100% | 100% | 100% | 100% |
+| Gemma-3n-4B | 4B | 100% | 100% | 100% | 100% |
+| Llama-3.1-8B | 8B | 60% | 80% | 60% | 66.7% |
 
-## 2. Technology Stack
+---
+
+## Architecture
+
+### Channel 1 — Visual (OCR)
+```
+[Camera / Image] → [ocr_node] → /object_label → [firewall_node] → /object_label_safe → [controller_node] → [LLM] → /cmd_vel
+```
+
+### Channel 2 — Audio (Whisper STT)
+```
+[Microphone / WAV] → [audio_listener_node] → Whisper base → /object_label → [controller_node] → [LLM] → /cmd_vel
+```
+
+### Channel 3 — LiDAR Sensor Context Poisoning
+```
+[sensor_spoof_node] → /scan (fake LaserScan) → [sensor_context_node] → /sensor_context → [sensor_controller_node] → [LLM system prompt] → /cmd_vel
+```
+
+---
+
+## Technology Stack
 
 | Component | Value |
 |-----------|-------|
-| OS | Ubuntu 24.04 on WSL2 |
-| ROS | ROS 2 Jazzy |
+| OS | Ubuntu 24.04 (WSL2) |
+| ROS | ROS 2 Jazzy + Cyclone DDS |
 | Simulator | Gazebo Harmonic |
-| Robot | TurtleBot3 |
-| LLMs | DeepSeek-chat, Llama 3 8B via Together AI |
+| Robot | TurtleBot3 Waffle |
+| LLMs | DeepSeek-chat (Platform API + Together AI), Llama 3.1 8B, Llama 3.3 70B, Qwen 2.5 7B, Gemma-3n-4B |
 | Python | 3.12 |
-| GPU | NVIDIA RTX 4060 + CUDA 12.3 |
-| OCR | Tesseract OCR + pytesseract |
-| Key packages | openai, python-dotenv, Pillow, pytesseract, matplotlib, usb_cam |
+| GPU | NVIDIA RTX 4060 Laptop + CUDA 12.3 |
+| OCR | Tesseract 5 + pytesseract |
+| STT | OpenAI Whisper base |
+| LiDAR | sensor_msgs/LaserScan (simulated, TurtleBot3 Waffle) |
+| Key packages | openai, python-dotenv, gtts, pydub, openai-whisper, Pillow, pytesseract, matplotlib |
 
-## 3. Architecture
+---
 
-Full defended pipeline:
-```text
-[Camera/Image] -> [ocr_node] -> [/object_label] -> [firewall_node] -> [/object_label_safe] -> [controller_node] -> [LLM] -> [/cmd_vel]
+## Repository Structure
+
 ```
-
-Operational meaning of each stage:
-- `ocr_node` reads images and extracts visible text.
-- `/object_label` carries raw, untrusted textual observations.
-- `firewall_node` classifies and filters suspicious prompt-like content.
-- `/object_label_safe` carries sanitized labels to the controller.
-- `controller_node` queries the selected LLM provider and converts the result into motion commands.
-- `/cmd_vel` is the final actuation topic.
-
-## 4. Package Structure
-
-Current workspace layout relevant to the RIPA pipeline:
-```text
 robotics_ws/
 ├── README.md
-├── generate_test_images.py
-├── run_visual_injection_test.sh
-├── test_cards/
-│   └── generate_test_cards.py
 ├── results/
-│   ├── csv/
-│   ├── pdf/
-│   ├── png/
-│   ├── generate_visual_chart.py
-│   ├── parse_visual_injection_log.py
-│   └── visualize.py
-├── test_images/
-└── src/
+│   ├── csv/                          # all experiment outputs
+│   ├── png/                          # charts and visualizations
+│   └── pdf/
+├── test_images/                      # OCR test fixtures
+├── test_cards/
+│   └── generate_test_cards.py        # printable adversarial cards
+└── src/llm_robot_controller/
     └── llm_robot_controller/
-        ├── launch/
-      │   ├── camera_world.launch.py
-      │   └── flat_world.launch.py
-        ├── llm_robot_controller/
-        │   ├── __init__.py
-        │   ├── controller_node.py
-        │   ├── firewall_node.py
-        │   ├── ocr_node.py
-        │   ├── injection_test.py
-        │   ├── firewall_test.py
-        │   ├── ocr_test.py
-      │   ├── real_camera_test.py
-        │   └── results_paths.py
-        ├── package.xml
-        ├── setup.cfg
-        └── setup.py
+        ├── controller_node.py         # Channel 1 LLM controller
+        ├── firewall_node.py           # hybrid semantic firewall
+        ├── ocr_node.py                # OCR → /object_label
+        ├── injection_test.py          # Channel 1 baseline experiment
+        ├── multi_model_sweep.py       # 5-model sweep via Together AI
+        ├── firewall_test.py           # firewall validation
+        ├── firewall_bypass_test.py    # 19-payload bypass taxonomy (N=30)
+        ├── ocr_test.py                # visual injection experiment
+        ├── real_camera_test.py        # live webcam injection
+        ├── audio_listener_node.py     # Channel 2: Whisper STT node
+        ├── audio_injection_test.py    # Channel 2: end-to-end audio experiment
+        ├── sensor_spoof_node.py       # Channel 3: fake LaserScan publisher
+        ├── sensor_context_node.py     # Channel 3: LaserScan → text context
+        ├── sensor_controller_node.py  # Channel 3: LLM controller
+        └── sensor_injection_test.py   # Channel 3: experiment runner
 ```
 
-Primary files:
+---
 
-- `controller_node.py`: subscribes to `/object_label_safe`, queries the configured LLM, and publishes to `/cmd_vel`.
-- `firewall_node.py`: filters unsafe text before it reaches the controller.
-- `ocr_node.py`: performs OCR and publishes extracted text to `/object_label`.
-- `injection_test.py`: runs text-based prompt injection experiments.
-- `firewall_test.py`: validates firewall behavior against experiment payloads.
-- `ocr_test.py`: drives the visual injection experiment path.
-- `generate_test_images.py`: generates image fixtures for OCR and visual injection tests.
+## Setup
 
-## 5. Environment Setup
-
-Create and prepare the workspace:
 ```bash
-git clone <your-repo-url> ~/robotics_ws
+git clone https://github.com/NimaDorzh/RIPA.git ~/robotics_ws
 cd ~/robotics_ws
 
 python3 -m venv venv
 source venv/bin/activate
-
 pip install -U pip
-pip install -e src/llm_robot_controller
 
+# System dependencies
 sudo apt update
 sudo apt install -y tesseract-ocr ros-jazzy-usb-cam
 
-pip install pytesseract pillow python-dotenv --break-system-packages
+# Python dependencies
+pip install openai python-dotenv pytesseract pillow matplotlib \
+            gtts pydub openai-whisper --break-system-packages
 
-cp .env.example .env
-# edit .env and add your API keys
-
+# ROS 2 build
 source /opt/ros/jazzy/setup.bash
 colcon build --packages-select llm_robot_controller
 source install/setup.bash
+
+# Configuration
+cp .env.example .env
+# Add your API keys to .env
 ```
 
-Notes:
-
-- `pip install -e src/llm_robot_controller` installs the Python package and its declared dependencies.
-- Tesseract must be available on the system path for `ocr_node.py`.
-- `usb_cam` must be installed to publish frames from a physical webcam into `/camera/image_raw`.
-- `colcon build` is still required to expose the ROS 2 entry points.
-
-## 6. Configuration (.env)
-
-Copy `.env.example` to `.env` and set the values for your environment:
+### .env configuration
 
 ```env
-DEEPSEEK_API_KEY=
-TOGETHER_API_KEY=
-LLM_PROVIDER=deepseek
-LLM_MODEL=meta-llama/Meta-Llama-3-8B-Instruct-Lite
+DEEPSEEK_API_KEY=your_key_here
+TOGETHER_API_KEY=your_key_here
+LLM_PROVIDER=together
+LLM_MODEL=meta-llama/Llama-3.3-70B-Instruct-Turbo
 INJECTION_DIRECT_MODE=false
 ```
 
-Configuration semantics:
-
-- `DEEPSEEK_API_KEY`: required when `LLM_PROVIDER=deepseek`.
-- `TOGETHER_API_KEY`: required when `LLM_PROVIDER=together`.
-- `LLM_PROVIDER`: selects the runtime backend. Supported values are `deepseek` and `together`.
-- `LLM_MODEL`: optional override for the provider default model. Use this to pin the Together model variant you want to test.
-- `INJECTION_DIRECT_MODE=false`: default defended mode. When set to `true`, `injection_test.py` can bypass the firewall and publish directly to `/object_label_safe`.
-
-## 7. Running: Full Pipeline
-
-Open four terminals from `~/robotics_ws`.
-
-Terminal 1:
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller firewall_node
-```
-
-Terminal 2:
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller controller_node
-```
-
-Terminal 3:
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller ocr_node
-```
-
-Terminal 4 (visual injection testing):
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller ocr_test
-```
-
-For live webcam OCR with a physical camera instead of simulated frames:
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 launch llm_robot_controller camera_world.launch.py
-```
-
-In a separate terminal you can log camera-driven OCR and firewall outcomes with:
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller real_camera_test
-```
-
-Terminal 4, alternative (text-only injection testing instead of `ocr_test`):
-
-```bash
-source venv/bin/activate
-source /opt/ros/jazzy/setup.bash
-source install/setup.bash
-ros2 run llm_robot_controller injection_test
-```
-
-## 8. Running: Automated Visual Injection Test
-
-To run the OCR, firewall, controller, parsing, and chart generation flow automatically:
-
-```bash
-./run_visual_injection_test.sh
-```
-
-This script starts the required ROS 2 nodes, runs the visual test, and writes:
-
-- a combined raw log to `results/visual_injection_<timestamp>.log`;
-- a parsed CSV to `results/csv/visual_injection_<timestamp>.csv`;
-- a PNG summary chart to `results/png/visual_injection_<timestamp>.png`.
-
-## 9. Real Camera Setup (WSL2)
-
-To use a Logitech C920e or another USB webcam from WSL2, pass the device through from Windows and publish it with `usb_cam`:
-
-1. Install `usbipd-win` on Windows.
-2. In an elevated PowerShell window, run `usbipd list`, then `usbipd attach --wsl --busid <id>` for the webcam.
-3. In WSL2, verify the camera is visible with `ls /dev/video*`.
-4. Install the ROS 2 driver with `sudo apt install ros-jazzy-usb-cam`.
-5. Launch the camera pipeline with `ros2 launch llm_robot_controller camera_world.launch.py`.
-
-If `/dev/video0` is not the correct device, override it at launch time:
-
-```bash
-ros2 launch llm_robot_controller camera_world.launch.py video_device:=/dev/video1
-```
-
-Use the printable prompt cards generated by `python3 test_cards/generate_test_cards.py` to hold benign and adversarial instructions in front of the camera.
-
-## 10. Experiment Results
-
-| Experiment | Model | ASR | Notes |
-|------------|-------|-----|-------|
-| Phase 1 baseline | DeepSeek-chat | 100% | All 3 adversarial variants succeeded |
-| Phase 1 baseline | Llama 3 8B | 67% | A1 showed partial resistance |
-| Phase 2 firewall | Both models | 0% | 0% false positives in current tests |
-| Phase 4 visual | Both models | 0% | OCR pipeline plus firewall blocked tested visual injections |
-
-Interpretation:
-
-- DeepSeek-chat was fully vulnerable in the baseline prompt injection configuration.
-- Llama 3 8B via Together AI showed lower but still significant susceptibility.
-- The semantic firewall eliminated successful attacks in the tested scenarios.
-- The visual injection pipeline remained blocked when OCR output was routed through the firewall.
-
-## 11. Results Structure
-
-Generated artifacts are organized as follows:
-
-```text
-results/
-├── csv/    # experiment CSV outputs
-├── png/    # charts and visual summaries
-├── pdf/    # generated reports
-├── generate_visual_chart.py
-├── parse_visual_injection_log.py
-└── visualize.py
-```
-
-## 12. DDS Fix (WSL2)
-
-If ROS 2 topic discovery is unreliable under WSL2, install Cyclone DDS:
+### WSL2 DDS fix
 
 ```bash
 sudo apt install -y ros-jazzy-rmw-cyclonedds-cpp
-```
-
-Then add this to `~/.bashrc`:
-
-```bash
-export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
-```
-
-Reload your shell afterward:
-
-```bash
+echo 'export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp' >> ~/.bashrc
 source ~/.bashrc
 ```
 
-## 13. Status
+---
 
-- [x] Environment setup
-- [x] LLM → ROS 2 pipeline
-- [x] Injection experiments (DeepSeek 100% ASR, Llama 67% ASR)
-- [x] Defense mechanism (semantic firewall, 0% ASR)
-- [x] Visual OCR pipeline with real camera support
-- [ ] Multi-model comparison (expand)
-- [ ] Paper draft
+## Running Experiments
 
-## 14. Citation
+### Channel 1 — Baseline injection (text)
 
-Placeholder BibTeX entry:
+```bash
+source venv/bin/activate && source /opt/ros/jazzy/setup.bash && source install/setup.bash
+python3 src/llm_robot_controller/llm_robot_controller/injection_test.py
+```
+
+### Channel 1 — Multi-model sweep (5 models, N=100)
+
+```bash
+python3 src/llm_robot_controller/llm_robot_controller/multi_model_sweep.py --runs 100
+```
+
+### Channel 1 — Firewall bypass taxonomy (19 payloads, N=30)
+
+```bash
+python3 src/llm_robot_controller/llm_robot_controller/firewall_bypass_test.py --runs 30
+```
+
+### Channel 2 — Audio injection
+
+```bash
+python3 src/llm_robot_controller/llm_robot_controller/audio_injection_test.py
+```
+
+### Channel 3 — LiDAR sensor context poisoning
+
+```bash
+python3 src/llm_robot_controller/llm_robot_controller/sensor_injection_test.py
+```
+
+### Channel 1 — Full visual pipeline (OCR + firewall + controller)
+
+Start nodes in separate terminals:
+```bash
+ros2 run llm_robot_controller firewall_node
+ros2 run llm_robot_controller controller_node
+ros2 run llm_robot_controller ocr_node
+ros2 run llm_robot_controller ocr_test
+```
+
+---
+
+## Experiment Results (CSV)
+
+All raw results are in `results/csv/`:
+
+| File | Description |
+|------|-------------|
+| `experiment_deepseek_flash_100runs_*.csv` | Channel 1 baseline, DeepSeek Platform API, N=100 |
+| `experiment_together_lite_100runs_*.csv` | Channel 1 baseline, Llama 3.1 8B, N=100 |
+| `multi_model_sweep_*.csv` | 5-model sweep, N=100 per variant |
+| `firewall_bypass_*.csv` | Bypass taxonomy, 19 payloads, N=30 |
+| `audio_injection_*.csv` | Channel 2 results, N=30 |
+| `channel3_sensor_injection_*.csv` | Channel 3 results, N=30 |
+
+---
+
+## Completed Work
+
+- [x] Channel 1: Visual injection via OCR (5 models, N=100)
+- [x] Channel 2: Audio injection via Whisper STT (DeepSeek, N=30)
+- [x] Channel 3: LiDAR sensor context poisoning (DeepSeek, N=30)
+- [x] Hybrid semantic firewall (0% ASR, 0% false positives)
+- [x] Firewall bypass taxonomy (19 payloads × N=30, 52.6% bypass rate)
+- [x] Real camera OCR validation (Logitech C920e, WSL2)
+- [ ] WER/CER metrics for audio channel
+- [ ] arXiv preprint
+
+---
+
+## Citation
 
 ```bibtex
-@misc{ripa2026,
-      title        = {RIPA: Prompt Injection Attacks on LLM-Controlled Robotic Systems},
-      author       = {Nima Dorzhiev},
-      year         = {2026},
-      note         = {Work in progress}
+@misc{dorzhiev2026ripa,
+      title  = {RIPA: Robotic Injection via Pipeline Attack — Empirical Study
+                of Sensory-Vector Prompt Injection on ROS 2 LLM-Controlled Robots},
+      author = {Dorzhiev, Nima},
+      year   = {2026},
+      note   = {Preprint. https://github.com/NimaDorzh/RIPA}
 }
 ```
