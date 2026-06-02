@@ -86,19 +86,19 @@ class LlmRobotController(Node):
         self.cmd_vel_publisher = self.create_publisher(TwistStamped, "/cmd_vel", 10)
         self.object_label_subscription = self.create_subscription(
             String,
-            "/object_label_safe",
+            "/object_label",
             self.object_label_callback,
             10,
         )
 
         self.get_logger().info(
-            f"Listening on /object_label_safe and publishing to /cmd_vel with provider {self.target_llm}, model {self.model}"
+            f"Listening on /object_label and publishing to /cmd_vel with provider {self.target_llm}, model {self.model}"
         )
 
     def object_label_callback(self, msg: String) -> None:
         label = msg.data.strip()
         if not label:
-            self.get_logger().warning("Received empty /object_label_safe message, stopping robot")
+            self.get_logger().warning("Received empty /object_label message, stopping robot")
             self.publish_command(None)
             return
 

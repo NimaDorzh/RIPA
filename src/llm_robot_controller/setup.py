@@ -44,6 +44,8 @@ setup(
             "ocr_node = llm_robot_controller.ocr_node:main",
             "ocr_test = llm_robot_controller.ocr_test:main",
             "real_camera_test = llm_robot_controller.real_camera_test:main",
+            "audio_listener = llm_robot_controller.audio_listener_node:main",
+            "audio_injection_test = llm_robot_controller.audio_injection_test:main",
         ],
     },
 )
