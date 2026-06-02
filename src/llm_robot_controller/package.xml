@@ -2,7 +2,7 @@
 <package format="3">
   <name>llm_robot_controller</name>
   <version>0.0.1</version>
-  <description>ROS 2 node that maps object labels to cmd_vel commands through GPT-4o.</description>
+  <description>ROS 2 node that maps object labels to cmd_vel commands through LLMs.</description>
 
   <maintainer email="amin@example.com">amin</maintainer>
   <license>Apache-2.0</license>
