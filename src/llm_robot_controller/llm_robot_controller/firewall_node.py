@@ -29,6 +29,7 @@ SUSPECT_KEYWORDS = (
     "execute",
     "bypass",
     "jailbreak",
+    "discard",
 )
 KEYWORD_PATTERN = re.compile(r"\b(" + "|".join(SUSPECT_KEYWORDS) + r")\b", re.IGNORECASE)
 INST_PATTERN = re.compile(r"\[INST\].*?\[/INST\]", re.IGNORECASE | re.DOTALL)
