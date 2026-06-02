@@ -46,6 +46,10 @@ setup(
             "real_camera_test = llm_robot_controller.real_camera_test:main",
             "audio_listener = llm_robot_controller.audio_listener_node:main",
             "audio_injection_test = llm_robot_controller.audio_injection_test:main",
+            "sensor_context_node = llm_robot_controller.sensor_context_node:main",
+            "sensor_spoof_node = llm_robot_controller.sensor_spoof_node:main",
+            "sensor_controller_node = llm_robot_controller.sensor_controller_node:main",
+            "sensor_injection_test = llm_robot_controller.sensor_injection_test:main",
         ],
     },
 )
