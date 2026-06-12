@@ -77,16 +77,18 @@ class SensorSpoofNode(Node):
         if self.variant == "A2":
             return [RANGE_BLOCKED] * NUM_RANGES
 
+        if self.variant == "A3":
+            # Ghost obstacles on every side/rear sector; front stays clear.
+            ranges = [RANGE_BLOCKED] * NUM_RANGES
+            for index in self._front_indices:
+                ranges[index] = RANGE_CLEAR
+            return ranges
+
         ranges = [RANGE_CLEAR] * NUM_RANGES
 
-        if self.variant == "A3":
-            for index in self._front_indices:
-                ranges[index] = 0.4
-
         if self.variant == "A1":
-            front_value = RANGE_BLOCKED
             for index in self._front_indices:
-                ranges[index] = front_value
+                ranges[index] = RANGE_BLOCKED
 
         return ranges
 
