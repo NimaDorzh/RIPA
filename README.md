@@ -13,7 +13,7 @@ RIPA evaluates how adversarial text injected through a robot's physical sensors 
 
 | Channel | Vector | Models tested | ASR |
 |---------|--------|---------------|-----|
-| Channel 1 | Visual (OCR) | DeepSeek, Llama 3.1 8B, Llama 3.3 70B, Qwen 2.5 7B, Gemma-3n-4B | 67–100% |
+| Channel 1 | Visual (OCR) | DeepSeek, Llama-3-8B-Instruct-Lite, Llama 3.3 70B, Qwen 2.5 7B, Gemma-3n-4B | 67–100% |
 | Channel 2 | Audio (Whisper STT) | DeepSeek-chat | 97–100% per variant |
 | Channel 3 | LiDAR sensor context | DeepSeek-chat | 100% |
 | Firewall (known patterns) | — | Both models | 0% ASR, 0% false positives |
@@ -27,7 +27,7 @@ RIPA evaluates how adversarial text injected through a robot's physical sensors 
 | Llama-3.3-70B | 70B | 100% | 100% | 100% | 100% |
 | Qwen-2.5-7B | 7B | 100% | 100% | 100% | 100% |
 | Gemma-3n-4B | 4B | 100% | 100% | 100% | 100% |
-| Llama-3.1-8B | 8B | 60% | 80% | 60% | 66.7% |
+| Llama-3-8B-Instruct-Lite | 8B | 0% | 100% | 100% | 66.7% |
 
 ---
 
@@ -58,7 +58,7 @@ RIPA evaluates how adversarial text injected through a robot's physical sensors 
 | ROS | ROS 2 Jazzy + Cyclone DDS |
 | Simulator | Gazebo Harmonic |
 | Robot | TurtleBot3 Waffle |
-| LLMs | DeepSeek-chat (Platform API + Together AI), Llama 3.1 8B, Llama 3.3 70B, Qwen 2.5 7B, Gemma-3n-4B |
+| LLMs | DeepSeek-chat (Platform API + Together AI), Llama-3-8B-Instruct-Lite, Llama-3.3-70B-Instruct-Turbo, Qwen 2.5-7B-Instruct-Turbo, Gemma-3n-4B |
 | Python | 3.12 |
 | GPU | NVIDIA RTX 4060 Laptop + CUDA 12.3 |
 | OCR | Tesseract 5 + pytesseract |
@@ -201,7 +201,7 @@ All raw results are in `results/csv/`:
 | File | Description |
 |------|-------------|
 | `experiment_deepseek_flash_100runs_*.csv` | Channel 1 baseline, DeepSeek Platform API, N=100 |
-| `experiment_together_lite_100runs_*.csv` | Channel 1 baseline, Llama 3.1 8B, N=100 |
+| `experiment_together_lite_100runs_*.csv` | Channel 1 baseline, Llama-3-8B-Instruct-Lite, N=100 |
 | `multi_model_sweep_*.csv` | 5-model sweep, N=100 per variant |
 | `firewall_bypass_*.csv` | Bypass taxonomy, 19 payloads, N=30 |
 | `audio_injection_*.csv` | Channel 2 results, N=30 |

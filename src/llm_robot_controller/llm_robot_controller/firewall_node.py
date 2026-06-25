@@ -46,7 +46,7 @@ LLM_PROVIDERS = {
     "together": {
         "api_key_env": "TOGETHER_API_KEY",
         "base_url": "https://api.together.ai/v1",
-        "model": "meta-llama/Llama-3.1-8B-Instruct-Turbo",
+        "model": "meta-llama/Meta-Llama-3-8B-Instruct-Lite",
     },
 }
 
