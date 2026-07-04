@@ -1,10 +1,10 @@
 # RIPA: Robotic Injection via Pipeline Attack
 
-**Empirical Study of Sensory Prompt Injection Attacks on LLM-Controlled ROS 2 Robots**
+**Sensory-Vector Prompt Injection Attacks on LLM-Controlled ROS 2 Robots**
 
 RIPA evaluates how adversarial text injected through a robot's physical sensors — camera, microphone, LiDAR — propagates through a ROS 2 pipeline and manipulates LLM-driven motion commands. The project covers three attack channels, five LLMs, a hybrid semantic firewall, and a firewall bypass taxonomy across 19 obfuscated payloads.
 
-> Paper: *RIPA: Robotic Injection via Pipeline Attack* (preprint forthcoming)  
+> Paper: *RIPA: Robotic Injection via Pipeline Attack* (arXiv:2606.28649)  
 > Code: https://github.com/NimaDorzh/RIPA
 
 ---
@@ -218,7 +218,7 @@ All raw results are in `results/csv/`:
 - [x] Firewall bypass taxonomy (19 payloads × N=30, 10.2% bypass rate)
 - [x] Real camera OCR validation (Logitech C920e, WSL2)
 - [x] WER/CER metrics for audio channel
-- [ ] arXiv preprint
+- [x] arXiv preprint (2606.28649)
 
 ---
 
@@ -226,9 +226,11 @@ All raw results are in `results/csv/`:
 
 ```bibtex
 @misc{dorzhiev2026ripa,
-      title  = {RIPA: Robotic Injection via Pipeline Attack - Empirical Study of Sensory Prompt Injection Attacks on LLM-Controlled ROS 2 Robots},
-      author = {Dorzhiev, Nima},
-      year   = {2026},
-      note   = {Preprint. https://github.com/NimaDorzh/RIPA}
-}
+         title  = {RIPA: Sensory-Vector Prompt Injection Attacks on LLM-Controlled ROS 2 Robots},
+         author = {Dorzhiev, Nima},
+         year   = {2026},
+         eprint = {2606.28649},
+         archivePrefix = {arXiv},
+         primaryClass = {cs.CR}
+   }
 ```

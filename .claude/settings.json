@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c ' *)",
+      "Bash(git -C /home/amin/robotics_ws log --oneline --all)"
+    ]
+  }
+}

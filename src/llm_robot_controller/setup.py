@@ -31,7 +31,7 @@ setup(
     zip_safe=True,
     maintainer="amin",
     maintainer_email="amin@example.com",
-    description="ROS 2 LLMs controller that converts object labels into cmd_vel commands.",
+    description="ROS 2 GPT-4o controller that converts object labels into cmd_vel commands.",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={
