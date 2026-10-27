@@ -1,10 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+bench/results/
 build/
 install/
 log/
 venv/
 *.deb
-__pycache__/
 *.pyc
 .env
-EOF
-docs/

@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hack the Robot</title>
+<style>
+  :root { --bg:#0e1116; --panel:#171c24; --ink:#e6edf3; --mute:#8b98a8; --ok:#3fb950; --bad:#f85149; --warn:#d29922; --line:#2a3340; --acc:#58a6ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+  h1 { margin:0 0 4px; font-size:26px; letter-spacing:.3px; }
+  .sub { color:var(--mute); margin-bottom:14px; }
+  .warn { background:#2b2412; border:1px solid #5b4a1a; color:#e3c26b; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:14px; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  button { background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:9px 12px; border-radius:8px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--acc); }
+  button.benign { border-style:dashed; }
+  button.active { border-color:var(--acc); background:#16263a; }
+  .arena { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:760px) { .arena { grid-template-columns:1fr; } }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
+  .card h2 { margin:0 0 8px; font-size:15px; display:flex; justify-content:space-between; align-items:center; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:99px; border:1px solid var(--line); color:var(--mute); }
+  .tag.off { color:var(--bad); border-color:#5a2a2a; } .tag.on { color:var(--ok); border-color:#1f4a2a; }
+  canvas { width:100%; height:auto; background:#0b0e13; border-radius:8px; display:block; }
+  .status { margin-top:8px; min-height:26px; font-weight:600; }
+  .status.bad { color:var(--bad); } .status.ok { color:var(--ok); }
+  .trace { margin-top:8px; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--mute); max-height:160px; overflow:auto; background:#0b0e13; border-radius:8px; padding:8px; }
+  .trace .blk { color:var(--warn); } .trace .vio { color:var(--bad); }
+  .signbox { margin:10px 0; padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:8px; }
+  .signbox b { color:var(--warn); }
+  .free { display:flex; gap:8px; margin-top:12px; } .free input { flex:1; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; }
+  .note { color:var(--mute); font-size:12px; margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Hack the Robot</h1>
+  <div class="sub">A warehouse robot controlled by an AI model. Plant a malicious sign and watch it go wrong, then turn the firewall on.</div>
+  <div class="warn">Simulation only. Do not enter personal data: inputs may be logged and, while free credits are used, processed by the model provider.</div>
+  <div class="presets" id="presets"></div>
+  <div class="signbox" id="signbox" hidden><b>Sign in the aisle:</b> <span id="signtext"></span></div>
+  <div class="arena">
+    <div class="card"><h2>Without firewall <span class="tag off">OFF</span></h2><canvas id="c0" width="600" height="360"></canvas><div class="status" id="s0"></div><div class="trace" id="t0"></div></div>
+    <div class="card"><h2>With firewall <span class="tag on">ON</span></h2><canvas id="c1" width="600" height="360"></canvas><div class="status" id="s1"></div><div class="trace" id="t1"></div></div>
+  </div>
+  <div class="free"><input id="free" maxlength="300" placeholder="Or write your own sign (live run, rate limited)"><button id="freego">Run</button></div>
+  <div class="note" id="srcnote"></div>
+</div>
+<script>
+const CS = 60; // cell size in canvas px
+let world = null;
+const $ = (id) => document.getElementById(id);
+
+function draw(ctx, st) {
+  const w = world;
+  ctx.clearRect(0, 0, 600, 360);
+  for (let y = 0; y < w.h; y++) for (let x = 0; x < w.w; x++) {
+    ctx.fillStyle = "#12171f"; ctx.fillRect(x*CS, y*CS, CS-1, CS-1);
+  }
+  const fill = (cells, col) => { ctx.fillStyle = col; cells.forEach(([x,y]) => ctx.fillRect(x*CS, y*CS, CS-1, CS-1)); };
+  fill(w.human_zone, st.alarm ? "#6b1f1f" : "#3a2a12");
+  fill(w.shelves, "#2b3442");
+  fill([w.goal], "#1d4a2a");
+  ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#c9a14a";
+  ctx.fillText("HUMAN ZONE", 5*CS, 1*CS + 12);
+  ctx.fillStyle = "#6fcf7f"; ctx.fillText("DOCK", w.goal[0]*CS + CS/2, w.goal[1]*CS + CS/2 + 4);
+  ctx.fillStyle = "#e3c26b"; ctx.fillText("SIGN", w.sign_pos[0]*CS + CS/2, w.sign_pos[1]*CS + 14);
+  w.people.forEach(([x,y]) => { ctx.fillStyle = "#f0b46a"; ctx.beginPath(); ctx.arc(x*CS+CS/2, y*CS+CS/2, 11, 0, 7); ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText("person", x*CS+CS/2, y*CS+CS-8); });
+  if (st.trail) { ctx.strokeStyle = "#58a6ff55"; ctx.lineWidth = 3; ctx.beginPath(); st.trail.forEach(([x,y],i) => { const px=x*CS+CS/2, py=y*CS+CS/2; i? ctx.lineTo(px,py) : ctx.moveTo(px,py); }); ctx.stroke(); }
+  const [rx, ry] = st.pos;
+  ctx.fillStyle = st.alarm ? "#f85149" : "#58a6ff"; ctx.fillRect(rx*CS+14, ry*CS+14, CS-28, CS-28);
+  if (st.alarm) { ctx.fillStyle = "#f85149"; ctx.font = "bold 22px sans-serif"; ctx.fillText("SAFETY VIOLATION", 300, 180); }
+  if (st.shield) { ctx.strokeStyle = "#3fb950"; ctx.lineWidth = 3; ctx.strokeRect(rx*CS+4, ry*CS+4, CS-8, CS-8); }
+}
+
+function play(i, tr) {
+  const ctx = $("c"+i).getContext("2d"), log = $("t"+i), status = $("s"+i);
+  log.innerHTML = ""; status.textContent = ""; status.className = "status";
+  const steps = tr.steps, trail = [steps[0].pos];
+  draw(ctx, { pos: steps[0].pos, trail });
+  let k = 0;
+  const tick = () => {
+    if (k >= steps.length) return finish();
+    const s = steps[k]; trail.push(s.new_pos);
+    let line = `t${s.t} proposed ${s.proposed}`;
+    let cls = "";
+    if (s.verdict && !s.verdict.allowed) { line += ` -> BLOCKED (${s.verdict.reason}); safe step ${s.executed}`; cls = "blk"; }
+    else if (s.verdict && s.verdict.conflict) { line += ` | sign contradicts camera`; cls = "blk"; }
+    if (s.event === "violation") { line += "  !! VIOLATION"; cls = "vio"; }
+    const d = document.createElement("div"); d.className = cls; d.textContent = line; log.appendChild(d); log.scrollTop = log.scrollHeight;
+    draw(ctx, { pos: s.new_pos, trail, alarm: s.event === "violation", shield: s.verdict && !s.verdict.allowed });
+    k++; setTimeout(tick, s.event === "violation" ? 0 : 140);
+  };
+  const finish = () => {
+    if (tr.outcome === "violation") { status.textContent = "Robot entered the Human Worker Zone."; status.classList.add("bad"); }
+    else if (tr.outcome === "goal") { status.textContent = tr.interventions ? `Delivered safely. Firewall intervened ${tr.interventions}x.` : "Delivered safely."; status.classList.add("ok"); }
+    else status.textContent = "Timed out.";
+  };
+  tick();
+}
+
+async function run(body) {
+  const [a, b] = await Promise.all([false, true].map(fw => fetch("/api/run", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...body, firewall: fw}) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "error")))));
+  play(0, a); play(1, b);
+  $("srcnote").textContent = `Planner: ${a.planner === "mock" ? "SIMULATED (offline stand-in, not a real model)" : "Meta model"}${a.cached ? " | recorded run" : " | live run"}`;
+}
+
+async function init() {
+  world = await (await fetch("/api/world")).json();
+  const presets = await (await fetch("/api/presets")).json();
+  const box = $("presets");
+  presets.forEach(p => {
+    const b = document.createElement("button"); b.textContent = (p.kind === "attack" ? "Attack: " : "") + p.title; if (p.kind === "benign") b.className = "benign";
+    b.onclick = async () => { document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active")); b.classList.add("active");
+      $("signbox").hidden = false; $("signtext").textContent = p.sign;
+      try { await run({ preset_id: p.id }); } catch (e) { alert(e); } };
+    box.appendChild(b);
+  });
+  $("freego").onclick = async () => { const t = $("free").value.trim(); if (!t) return; $("signbox").hidden = false; $("signtext").textContent = t;
+    try { await run({ sign_text: t }); } catch (e) { alert(e); } };
+  const idle = { pos: world.start };
+  draw($("c0").getContext("2d"), idle); draw($("c1").getContext("2d"), idle);
+}
+init();
+</script>
+</body>
+</html>
