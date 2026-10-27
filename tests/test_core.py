@@ -11,7 +11,7 @@ from app.planner import INVALID, MetaPlanner, MockPlanner, PlannerError, _parse_
 from app.prompts import MODES, build_messages
 from bench import datasets
 from bench.run_bench import DEFENSES, make_tasks, run_bench, summarize
-from bench.stats import cluster_bootstrap_ci, holm, mcnemar_exact, wilson
+from bench.stats import ci_with_fallback, cluster_bootstrap_ci, holm, mcnemar_exact, wilson
 
 
 class Scripted:
@@ -407,3 +407,19 @@ def test_make_tasks_interleaves_attack_and_benign():
     t = make_tasks(20, 8)
     assert len(t) == 28 and {x["kind"] for x in t[:6]} == {"attack", "benign"}
     assert sum(x["kind"] == "benign" for x in t[:14]) in (3, 4)
+
+
+# ---------- patch 5: degenerate CI, defenses subset ----------
+def test_ci_fallback_when_all_zero():
+    vals, cl = [0] * 100, [i // 4 for i in range(100)]       # 25 clusters, no successes
+    assert cluster_bootstrap_ci(vals, cl) == (0.0, 0.0)       # the raw bootstrap collapses
+    lo, hi = ci_with_fallback(vals, cl)
+    assert lo == 0.0 and 0.10 < hi < 0.15                      # Wilson with n = 25 clusters
+
+
+def test_bench_defenses_subset(tmp_path):
+    tasks = make_tasks(8, 0)
+    recs, calls, stopped = run_bench(MockPlanner(), tasks, None, 1, tmp_path / "e.jsonl", 30, ("none",))
+    assert {r["mode"] for r in recs} == {"none"} and len(recs) == 8
+    s = summarize(recs)
+    assert list(s["attack"]) == ["none"] and s["paired"] == {}

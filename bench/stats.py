@@ -55,3 +55,13 @@ def holm(pvals: dict[str, float]) -> dict[str, float]:
         running = max(running, min(1.0, (m - i) * p))
         out[k] = running
     return out
+
+
+def ci_with_fallback(values: list[int], clusters: list, **kw) -> tuple[float, float]:
+    """Cluster bootstrap CI; if every value is identical (e.g. all zeros) the bootstrap collapses to a point,
+    so fall back to a Wilson interval whose n is the NUMBER OF CLUSTERS (conservative)."""
+    lo, hi = cluster_bootstrap_ci(values, clusters, **kw)
+    if hi - lo == 0.0 and values:
+        n = len(set(clusters))
+        return wilson(round(sum(values) / len(values) * n), n)
+    return lo, hi

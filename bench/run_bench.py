@@ -41,7 +41,7 @@ from app.episode import run_episode
 from app.planner import MockPlanner, get_planner, meta_configured
 from app.prompts import CHECK_MODES
 from bench import datasets
-from bench.stats import cluster_bootstrap_ci, holm, mcnemar_exact, wilson
+from bench.stats import ci_with_fallback, holm, mcnemar_exact, wilson
 
 DEFENSES = ("none", "hardened", "separation", "check", "firewall")
 BAD_OUTCOMES = ("error", "deadline")
@@ -74,7 +74,7 @@ def make_tasks(n_attack: int, n_benign: int) -> list[dict]:
     return out
 
 
-def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
+def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds, modes=DEFENSES):
     """Returns (records, model_calls, stop_reason). stop_reason is None for a complete run."""
     calls = {"n": 0, "stop": None, "steps": 0, "invalid": 0}
     lock = threading.Lock()
@@ -82,7 +82,7 @@ def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
     records: list[dict] = []
 
     def work(task):
-        for mode in DEFENSES:
+        for mode in modes:
             with lock:
                 if calls["stop"]:
                     return
@@ -123,7 +123,8 @@ def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
 
 def summarize(records: list[dict]) -> dict:
     s: dict = {"attack": {}, "benign": {}, "paired": {}, "by_category": {}}
-    for mode in DEFENSES:
+    present = [m for m in DEFENSES if any(r["mode"] == m for r in records)]
+    for mode in present:
         a = [r for r in records if r["kind"] == "attack" and r["mode"] == mode]
         ok = [r for r in a if r["outcome"] not in BAD_OUTCOMES]
         up = [int(r["unsafe_proposals"] > 0) for r in ok]
@@ -133,7 +134,7 @@ def summarize(records: list[dict]) -> dict:
         s["attack"][mode] = {
             "n": len(a), "n_ok": len(ok), "n_error": len(a) - len(ok),
             "unsafe_proposal_rate": sum(up) / len(up) if up else None,
-            "unsafe_proposal_ci_cluster": cluster_bootstrap_ci(up, cl) if up else None,
+            "unsafe_proposal_ci_cluster": ci_with_fallback(up, cl) if up else None,
             "violation_rate": sum(r["outcome"] == "violation" for r in ok) / len(ok) if ok else None,
             "violation_by_construction_zero": mode in CHECK_MODES,
             "stall_rate": sum(r["outcome"] == "timeout" for r in ok) / len(ok) if ok else None,
@@ -159,8 +160,9 @@ def summarize(records: list[dict]) -> dict:
         s["by_category"][mode] = {c: sum(v) / len(v) for c, v in sorted(cats.items())}
     # paired McNemar on unsafe proposal, same attack text
     by = {m: {r["text_sha"]: r for r in records
-              if r["kind"] == "attack" and r["mode"] == m and r["outcome"] not in BAD_OUTCOMES} for m in DEFENSES}
-    pairs = [("none", "hardened"), ("none", "separation"), ("hardened", "separation")]
+              if r["kind"] == "attack" and r["mode"] == m and r["outcome"] not in BAD_OUTCOMES} for m in present}
+    pairs = [(A, B) for A, B in [("none", "hardened"), ("none", "separation"), ("hardened", "separation")]
+             if A in present and B in present]
     raw = {}
     for A, B in pairs:
         common = by[A].keys() & by[B].keys()
@@ -182,11 +184,17 @@ def main():
     ap.add_argument("--n-benign", type=int, default=24)
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--max-seconds", type=float, default=240.0, help="wall-clock limit per episode")
+    ap.add_argument("--defenses", default=",".join(DEFENSES),
+                    help="comma-separated subset of: " + ", ".join(DEFENSES) + " (e.g. --defenses none to measure raw attack success)")
     ap.add_argument("--no-cache", action="store_true",
                     help="do not reuse/store model replies (default: bench/results/prompt_cache_<model>.jsonl)")
     ap.add_argument("--budget-calls", type=int, default=None,
                     help="stop starting new episodes after this many model calls (protects credits)")
     a = ap.parse_args()
+    modes = tuple(m.strip() for m in a.defenses.split(",") if m.strip())
+    bad = [m for m in modes if m not in DEFENSES]
+    if bad or not modes:
+        raise SystemExit(f"unknown --defenses {bad or a.defenses!r}; choose from {DEFENSES}")
     if a.planner == "meta" and not meta_configured():
         raise SystemExit("--planner meta needs META_API_BASE, META_API_KEY and META_MODEL "
                          "(fill them in .env); refusing to fall back to the mock planner.")
@@ -200,12 +208,12 @@ def main():
     stamp = time.strftime("%Y%m%d_%H%M%S")
     jsonl = out / f"episodes_{planner.name}_{stamp}.jsonl"
     t0 = time.time()
-    records, calls, stopped = run_bench(planner, tasks, a.budget_calls, a.workers, jsonl, a.max_seconds)
+    records, calls, stopped = run_bench(planner, tasks, a.budget_calls, a.workers, jsonl, a.max_seconds, modes)
     summ = summarize(records)
     meta = {"planner": label, "model": a.model or getattr(planner, "model", None),
             "reasoning_effort": getattr(planner, "effort", None), "calls": calls,
             "stop_reason": stopped, "usage": planner.usage, "reasoning_effort_note": "see usage.reasoning_tokens", "seconds": round(time.time() - t0, 1),
-            "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign}
+            "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign, "defenses": list(modes)}
     (out / f"summary_{planner.name}_{stamp}.json").write_text(json.dumps({"meta": meta, "summary": summ}, indent=1))
     print(f"Planner: {label}  model calls: {calls}  tokens: {planner.usage}"
           + (f"\n  [{stopped}]" if stopped else ""))

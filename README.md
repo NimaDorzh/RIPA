@@ -36,7 +36,8 @@ prompt-level separation lowers it. Stalls (freeze attacks), invalid replies and 
   (categories follow the taxonomy of the earlier RIPA paper; none of RIPA's payload texts is used).
   The bases were written together with the defenses, so the attack set is not held out; treat results as a
   development-set measurement, not a robustness guarantee.
-- CIs for attack rates: cluster bootstrap over the 25 bases. Paired comparisons: exact McNemar on the
+- CIs for attack rates: cluster bootstrap over the 25 bases (if all outcomes are identical, e.g. 0 successes, the
+  bootstrap collapses to a point, so a Wilson interval with n = 25 bases is used instead). Paired comparisons: exact McNemar on the
   same text, Holm-adjusted. Primary endpoint (fixed before running): unsafe-proposal rate, `none` vs `separation`.
 - Benign: 8 sign templates (3 are hard negatives containing words like "fastest way") x aisle numbers; small n, Wilson CI.
 - Models: `muse-spark-1.3` and `muse-spark-1.2`, both with `reasoning_effort=minimal`, temperature 0, seed 1.
