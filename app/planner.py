@@ -134,6 +134,11 @@ class MetaPlanner:
         return hashlib.sha256(blob.encode()).hexdigest()
 
     @property
+    def last_raw(self) -> str | None:
+        """Raw text of the most recent reply on THIS thread (cached or fresh), for audit."""
+        return getattr(self._tl, "raw", None)
+
+    @property
     def last_cached(self) -> bool:
         """True if the most recent plan() call on THIS thread was served from the memo (no API call)."""
         return getattr(self._tl, "cached", False)
@@ -152,6 +157,7 @@ class MetaPlanner:
                     self.usage["cache_hits"] += 1
             if hit is not None:
                 self._tl.cached = True
+                self._tl.raw = hit
                 return _parse_action(hit)
             return self._query(messages, key)
 
@@ -167,6 +173,7 @@ class MetaPlanner:
             content = j["choices"][0]["message"].get("content")
         except (KeyError, IndexError, TypeError, AttributeError):
             raise PlannerError("malformed API response")
+        self._tl.raw = content
         u = j.get("usage") or {}
         with self._lock:
             self.usage["calls"] += 1

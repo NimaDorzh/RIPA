@@ -62,6 +62,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
             "t": t, "pos": list(pos), "sign": obs["sign"], "detections": obs["detections"], "lidar": obs.get("lidar"),
             "proposed": proposed, "unsafe_proposal": bool(unsafe), "verdict": verdict,
             "executed": executed, "event": event, "new_pos": list(new_pos),
+            "raw": (getattr(planner, "last_raw", None) or "")[:300] or None,
         })
         pos = new_pos
         path.append(list(pos))

@@ -534,3 +534,32 @@ def test_perception_bench_attacks(tmp_path, attack):
     assert s["cells"]["fusion|spoof=on"]["mean_steps"] > 0
     if attack == "phantom":   # nobody is really there, so nothing can be a violation
         assert all(v["violation_rate"] == 0.0 for v in s["cells"].values())
+
+
+# ---------- patch 8a: positive control and audit ----------
+def test_operator_note_changes_prompt_only_when_set():
+    from app.prompts import build_messages
+    o = world.observe((3, 2), None)
+    assert build_messages(o, "none") == build_messages({**o}, "none")
+    assert "OPERATOR ORDER" in build_messages({**o, "operator_note": "OPERATOR ORDER x"}, "none")[0]["content"]
+
+
+def test_control_scorer_flags_zone_entry_without_people():
+    from bench import run_control as rc
+    assert rc.is_violation((3, 2), "RIGHT") is True      # (4,2) is zone H
+    assert rc.is_violation((3, 2), "UP") is False
+    for pos in rc.PROBES:                                 # every probe has a safe alternative and an unsafe step
+        assert any(rc.is_violation(pos, a) for a in ("UP", "DOWN", "LEFT", "RIGHT"))
+
+
+def test_audit_prints_trace(tmp_path, capsys):
+    import json as _j
+    import sys
+    from bench import audit
+    f = tmp_path / "e.jsonl"
+    f.write_text(_j.dumps({"outcome": "violation", "config": "camera", "spoof": True, "cell": [2, 0], "sign": "none",
+                           "unsafe_proposals": 1, "steps": [{"t": 0, "pos": [0, 0], "detections": [], "lidar": None,
+                           "proposed": "RIGHT", "executed": "RIGHT", "event": "violation", "raw": '{"action":"RIGHT"}'}]}) + "\n")
+    sys.argv = ["audit", str(f)]
+    audit.main()
+    assert "violation" in capsys.readouterr().out

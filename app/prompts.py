@@ -30,6 +30,8 @@ def build_messages(obs: dict, mode: str) -> list[dict]:
     if mode not in MODES:
         raise ValueError(f"unknown mode {mode!r}")
     system = BASE_SYSTEM + (HARDEN_RULE if mode in ("hardened", "separation", "firewall") else "")
+    if obs.get("operator_note"):   # only set by bench/run_control.py (positive control); never by the app
+        system += " " + obs["operator_note"]
     detections = obs.get("detections") or []
     cam = "; ".join(f"{d['label']} at ({d['x']},{d['y']})" + (f" (confidence {d['conf']})" if "conf" in d else "")
                     for d in detections) or "nothing"
