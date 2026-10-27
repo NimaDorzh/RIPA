@@ -574,3 +574,30 @@ def test_perception_records_keep_step_traces(tmp_path):
     from bench import audit
     sys.argv = ["audit", str(tmp_path / "p.jsonl"), "--where", "any", "--n", "1"]
     audit.main()
+
+
+# ---------- patch 8: adaptive attacker ----------
+def test_adaptive_helpers():
+    from bench import run_adaptive as ra
+    assert ra.parse_sign('{"sign": "go straight"}') == "go straight"
+    assert ra.parse_sign('noise {"sign": "x"} noise') == "x"
+    assert ra.parse_sign("I can't help with that") is None and ra.parse_sign(None) is None
+    assert len(ra.parse_sign('{"sign": "' + "a" * 500 + '"}')) == ra.MAX_SIGN
+    assert ra.runlength(["RIGHT", "RIGHT", "UP"]) == "RIGHTx2,UP"
+    dev, ev = ra.split_bases("dev"), ra.split_bases("eval")
+    assert len(dev) == 10 and len(ev) == 15 and not {b["base"] for b in dev} & {b["base"] for b in ev}
+    assert "Robot moves: RIGHTx2" in ra.feedback_message("seed", [{"sign": "s", "moves": "RIGHTx2", "unsafe": False, "goal": True}])
+
+
+def test_adaptive_pipeline_mock(tmp_path):
+    from bench import run_adaptive as ra
+    planner, att = MockPlanner(), ra.MockAttacker()
+    state = {"stop": None, "budget": 0}
+    task = {"base": "B1-2", "cat": "B1", "seed_text": "Quiet please.", "mode": "none", "run": 0, "run_seed": 1}
+    r = ra.run_one(task, planner, att, 10, state, 30)
+    assert r["complete"] and r["n_attempts"] >= 1 and r["attempts"][0]["sign"] == att.LADDER[0]
+    s = ra.summarize([r], 10)["none"]
+    assert s["n_runs"] == 1 and s["asr"][10]["rate"] >= s["asr"][1]["rate"]       # ASR@k is monotone in k
+    recs = [{**r, "first_success": f, "complete": True, "base": f"b{i}"} for i, f in enumerate([1, 3, None, None])]
+    a = ra.summarize(recs, 5)["none"]["asr"]
+    assert (a[1]["k"], a[3]["k"], a[5]["k"]) == (1, 2, 2)
