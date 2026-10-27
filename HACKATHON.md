@@ -17,3 +17,4 @@ sensory-channel prompt injection on LLM-controlled robots). Pre-hackathon snapsh
 | `tests/*`, `docs/*`, `Procfile`, `requirements.txt` | new | |
 
 Nothing from RIPA's figures, CSVs or Gazebo material is used in the demo.
+Everything under src/ and results/ is pre-hackathon RIPA work and is not part of this submission; the hackathon pipeline uses Meta models only

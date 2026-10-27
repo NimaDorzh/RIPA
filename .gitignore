@@ -14,3 +14,4 @@ venv/
 # local tooling
 .claude/
 .github/agents/
+.clineignore
