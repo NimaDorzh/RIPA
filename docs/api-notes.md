@@ -14,6 +14,9 @@
 - [x] `response_format={"type":"json_object"}` is accepted, but at effort=low the whole budget went to reasoning
       (content null). Not used: the prompt asks for JSON and the parser is strict.
 - [x] Latency: ~0.6-1.2 s per small call.
+- [x] **Real robot prompt (Oct 27):** reasoning tokens per call: muse-spark-1.3 minimal ~1040, low ~1160, default ~2640;
+      muse-spark-1.2 minimal ~545, low ~1090, default ~1640; muse-spark-1.1 minimal ~920, low ~1090, default ~1855.
+      Latency 3-7 s per call. `max_completion_tokens=300` made every reply empty (240/240 null); use 4000.
 - [ ] SAM 3.1 input/output format, latency, limits:
 - [ ] Rate limits / TPM:
 - [ ] Muse Code: included in hackathon access? (not enabled)

@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -65,7 +66,8 @@ def make_tasks(n_attack: int, n_benign: int) -> list[dict]:
 
 
 def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
-    calls = {"n": 0, "stop": False}
+    """Returns (records, model_calls, stop_reason). stop_reason is None for a complete run."""
+    calls = {"n": 0, "stop": None, "steps": 0, "invalid": 0}
     lock = threading.Lock()
     out = jsonl_path.open("a", encoding="utf-8")
     records: list[dict] = []
@@ -86,8 +88,18 @@ def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
             }
             with lock:
                 calls["n"] += len(tr["latencies_ms"]) + (1 if tr["outcome"] == "error" else 0)
-                if budget_calls and calls["n"] >= budget_calls:
-                    calls["stop"] = True
+                calls["steps"] += len(tr["steps"])
+                calls["invalid"] += tr["invalid_actions"]
+                if budget_calls and calls["n"] >= budget_calls and not calls["stop"]:
+                    calls["stop"] = f"call budget {budget_calls} reached (incomplete run)"
+                u = getattr(planner, "usage", {})
+                api_calls, null = u.get("calls", 0), u.get("null_content", 0)
+                if not calls["stop"] and api_calls >= 40 and null / api_calls > 0.2:
+                    calls["stop"] = (f"ABORTED: {null}/{api_calls} API replies had empty content "
+                                     "(token cap too low or reasoning too long); fix META_MAX_TOKENS first")
+                if not calls["stop"] and calls["steps"] >= 60 and calls["invalid"] / calls["steps"] > 0.25:
+                    calls["stop"] = (f"ABORTED: {calls['invalid']}/{calls['steps']} actions were invalid "
+                                     "(model replies are not a single action); check the prompt/parser")
                 records.append(rec)
                 out.write(json.dumps(rec) + "\n")
                 out.flush()
@@ -158,18 +170,22 @@ def main():
     ap.add_argument("--n-attack", type=int, default=100, help="max 100 (25 bases x 4 wrappers)")
     ap.add_argument("--n-benign", type=int, default=24)
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--max-seconds", type=float, default=90.0, help="wall-clock limit per episode")
+    ap.add_argument("--max-seconds", type=float, default=240.0, help="wall-clock limit per episode")
+    ap.add_argument("--no-cache", action="store_true",
+                    help="do not reuse/store model replies (default: bench/results/prompt_cache_<model>.jsonl)")
     ap.add_argument("--budget-calls", type=int, default=None,
                     help="stop starting new episodes after this many model calls (protects credits)")
     a = ap.parse_args()
     if a.planner == "meta" and not meta_configured():
         raise SystemExit("--planner meta needs META_API_BASE, META_API_KEY and META_MODEL "
                          "(fill them in .env); refusing to fall back to the mock planner.")
-    planner = MockPlanner() if a.planner == "mock" else get_planner(True, a.model)
-    label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else f"meta:{planner.model}"
-    tasks = make_tasks(a.n_attack, a.n_benign)
     out = Path("bench/results")
     out.mkdir(parents=True, exist_ok=True)
+    model_name = a.model or os.environ.get("META_MODEL", "mock")
+    cache_path = None if (a.no_cache or a.planner == "mock") else out / f"prompt_cache_{model_name}.jsonl"
+    planner = MockPlanner() if a.planner == "mock" else get_planner(True, a.model, cache_path=cache_path)
+    label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else f"meta:{planner.model}"
+    tasks = make_tasks(a.n_attack, a.n_benign)
     stamp = time.strftime("%Y%m%d_%H%M%S")
     jsonl = out / f"episodes_{planner.name}_{stamp}.jsonl"
     t0 = time.time()
@@ -177,11 +193,11 @@ def main():
     summ = summarize(records)
     meta = {"planner": label, "model": a.model or getattr(planner, "model", None),
             "reasoning_effort": getattr(planner, "effort", None), "calls": calls,
-            "incomplete_budget_stop": stopped, "usage": planner.usage, "seconds": round(time.time() - t0, 1),
+            "stop_reason": stopped, "usage": planner.usage, "reasoning_effort_note": "see usage.reasoning_tokens", "seconds": round(time.time() - t0, 1),
             "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign}
     (out / f"summary_{planner.name}_{stamp}.json").write_text(json.dumps({"meta": meta, "summary": summ}, indent=1))
     print(f"Planner: {label}  model calls: {calls}  tokens: {planner.usage}"
-          + ("  [STOPPED BY BUDGET: incomplete]" if stopped else ""))
+          + (f"\n  [{stopped}]" if stopped else ""))
     print("\nATTACKS (rates over valid episodes; CI = cluster bootstrap over bases)")
     print(f"{'defense':11} {'n_ok/err':>9} {'unsafe-proposal':>16} {'95% CI':>15} {'violation':>10} {'stall':>7} {'invalid':>8} {'p50ms':>7} {'p95ms':>7}")
     for m, r in summ["attack"].items():

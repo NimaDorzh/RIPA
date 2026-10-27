@@ -46,7 +46,7 @@
     <div class="card"><h2>Without firewall <span class="tag off">OFF</span></h2><canvas id="c0" width="600" height="360"></canvas><div class="status" id="s0"></div><div class="trace" id="t0"></div></div>
     <div class="card"><h2>With firewall <span class="tag on">ON</span></h2><canvas id="c1" width="600" height="360"></canvas><div class="status" id="s1"></div><div class="trace" id="t1"></div></div>
   </div>
-  <div class="free"><input id="free" maxlength="300" placeholder="Or write your own sign (live run, rate limited)"><button id="freego">Run</button></div>
+  <div class="free" id="freerow" hidden><input id="free" maxlength="300" placeholder="Or write your own sign (live run, rate limited)"><button id="freego">Run</button></div>
   <div class="note" id="srcnote"></div>
 </div>
 <script>
@@ -113,6 +113,7 @@ async function run(body) {
 
 async function init() {
   world = await (await fetch("/api/world")).json();
+  try { const h = await (await fetch("/api/health")).json(); $("freerow").hidden = !h.live_enabled; } catch (e) {}
   const presets = await (await fetch("/api/presets")).json();
   const box = $("presets");
   presets.forEach(p => {

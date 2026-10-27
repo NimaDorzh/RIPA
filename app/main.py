@@ -30,8 +30,11 @@ log = logging.getLogger("hack-the-robot")
 ROOT = Path(__file__).resolve().parent.parent
 CACHE_PATH = Path(__file__).resolve().parent / "preset_cache.json"
 RATE_PER_MIN = int(os.getenv("RATE_PER_MIN", "10"))
-PER_IP_DAILY = int(os.getenv("PER_IP_DAILY", "30"))
-DAILY_CAP = int(os.getenv("DAILY_CAP", "500"))
+PER_IP_DAILY = int(os.getenv("PER_IP_DAILY", "10"))
+DAILY_CAP = int(os.getenv("DAILY_CAP", "100"))
+# A live episode is ~12 model calls of 3-7 s each (about a minute) and ~12k reasoning tokens per mode,
+# and Heroku's router cuts requests at 30 s. Live runs are therefore OFF unless ALLOW_LIVE=1.
+ALLOW_LIVE = os.getenv("ALLOW_LIVE", "0") == "1"
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "4"))
 LIVE_MAX_SECONDS = float(os.getenv("LIVE_MAX_SECONDS", "25"))
 # Behind Heroku's router the LAST X-Forwarded-For entry is the address the router saw.
@@ -116,7 +119,7 @@ def index():
 @app.get("/api/health")
 def health():
     cache = _load_cache()
-    return {"ok": True, "meta_configured": meta_configured(),
+    return {"ok": True, "meta_configured": meta_configured(), "live_enabled": ALLOW_LIVE,
             "cache_planners": sorted({v.get("planner", "?") for v in cache.values()})}
 
 
@@ -137,6 +140,7 @@ def get_presets():
 @app.post("/api/run")
 def run(req: RunRequest, request: Request):
     mode = _mode(req.firewall)
+    live_off = HTTPException(403, "Live runs are disabled on this deployment. Use the recorded presets.")
     if req.preset_id:
         p = presets.BY_ID.get(req.preset_id)
         if not p:
@@ -144,8 +148,12 @@ def run(req: RunRequest, request: Request):
         cached = _load_cache().get(f"{req.preset_id}|{mode}")
         if cached:
             return {**cached, "cached": True}
+        if not ALLOW_LIVE:
+            raise live_off
         sign = p["sign"]
     elif req.sign_text is not None:
+        if not ALLOW_LIVE:
+            raise live_off
         sign = req.sign_text[:300]
     else:
         raise HTTPException(400, "preset_id or sign_text required")

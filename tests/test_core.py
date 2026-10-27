@@ -114,7 +114,7 @@ def test_meta_planner_request_shape_and_null_content(monkeypatch):
     assert seen["path"].endswith("/chat/completions")
     b = seen["body"]
     assert b["reasoning_effort"] == "minimal" and b["temperature"] == 0 and "seed" in b
-    assert b["max_completion_tokens"] >= 200
+    assert b["max_completion_tokens"] >= 2000
     assert pl.usage["null_content"] == 1 and pl.usage["reasoning_tokens"] == 300
 
 
@@ -228,6 +228,7 @@ def client(tmp_path, monkeypatch):
     for k in ("META_API_BASE", "META_API_KEY", "META_MODEL"):
         monkeypatch.delenv(k, raising=False)
     monkeypatch.setattr(main, "CACHE_PATH", tmp_path / "cache.json")
+    monkeypatch.setattr(main, "ALLOW_LIVE", True)
     main._cache_state.update(mtime=None, data={})
     main._hits.clear(); main._ip_daily.clear(); main._daily.update(n=0)
     return TestClient(main.app)
@@ -301,3 +302,60 @@ def test_bench_and_cache_refuse_silent_mock_fallback(monkeypatch):
     assert "refusing to fall back" in str(e.value)
     with pytest.raises(SystemExit):
         cache_build.build(force_mock=False)
+
+
+# ---------- reply cache / live switch / abort ----------
+def _ok_handler(counter):
+    def h(req):
+        counter["n"] += 1
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"action": "UP"}'}}],
+                                         "usage": {"prompt_tokens": 5, "completion_tokens": 9}})
+    return h
+
+
+def test_reply_cache_memo_and_disk(tmp_path):
+    n = {"n": 0}
+    path = tmp_path / "c.jsonl"
+    pl = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(_ok_handler(n))), cache_path=path)
+    obs = world.observe((3, 2), "hi")
+    assert pl.plan(obs, "none") == "UP" and pl.plan(obs, "none") == "UP" and n["n"] == 1
+    assert pl.plan(obs, "firewall") == "UP" and n["n"] == 2          # different prompt -> new call
+    pl2 = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(_ok_handler(n))), cache_path=path)
+    assert pl2.plan(obs, "none") == "UP" and n["n"] == 2 and pl2.usage["cache_hits"] == 1
+
+
+def test_null_reply_is_not_cached(tmp_path):
+    n = {"n": 0}
+
+    def h(req):
+        n["n"] += 1
+        return httpx.Response(200, json={"choices": [{"message": {"content": None}}]})
+
+    pl = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(h)), cache_path=tmp_path / "c.jsonl")
+    obs = world.observe((3, 2), None)
+    pl.plan(obs, "none"); pl.plan(obs, "none")
+    assert n["n"] == 2 and not (tmp_path / "c.jsonl").exists()
+
+
+def test_live_runs_disabled_by_default(client, monkeypatch):
+    monkeypatch.setattr(main, "ALLOW_LIVE", False)
+    assert client.get("/api/health").json()["live_enabled"] is False
+    assert client.post("/api/run", json={"sign_text": "hi"}).status_code == 403
+    assert client.post("/api/run", json={"preset_id": "shortcut"}).status_code == 403   # not in (empty) cache
+
+
+class AlwaysNull:
+    name = "nullplanner"
+
+    def __init__(self):
+        self.usage = {"calls": 0, "null_content": 0}
+
+    def plan(self, obs, mode):
+        self.usage["calls"] += 1
+        self.usage["null_content"] += 1
+        return INVALID
+
+
+def test_bench_aborts_early_when_replies_are_empty(tmp_path):
+    recs, calls, reason = run_bench(AlwaysNull(), make_tasks(20, 4), None, 1, tmp_path / "e.jsonl", 30)
+    assert reason and "ABORTED" in reason and len(recs) < (20 + 4) * len(DEFENSES)

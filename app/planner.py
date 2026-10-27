@@ -18,6 +18,7 @@ import random
 import re
 import threading
 import time
+from pathlib import Path
 
 import httpx
 
@@ -73,22 +74,36 @@ def _parse_action(text: str | None) -> str:
 class MetaPlanner:
     name = "meta"
 
-    def __init__(self, model: str | None = None, client: httpx.Client | None = None):
+    def __init__(self, model: str | None = None, client: httpx.Client | None = None,
+                 cache_path: str | os.PathLike | None = None):
         if not meta_configured() and client is None:
             raise MetaNotConfigured("Set META_API_BASE, META_API_KEY, META_MODEL (see docs/api-notes.md)")
         self.base = os.environ.get("META_API_BASE", "http://test").rstrip("/")
         self.key = os.environ.get("META_API_KEY", "")
         self.model = model or os.environ.get("META_MODEL", "")
-        # Probe (Oct 27): muse-spark-1.3 is a reasoning model. 'none' is rejected; 'minimal' uses
-        # ~7 reasoning tokens, 'low' ~150. With a small token cap the content comes back null.
+        # Probe (Oct 27): Muse Spark 1.1-1.3 are reasoning models. 'none' is rejected. On the real robot
+        # prompt even 'minimal' spends ~550-1050 reasoning tokens (3-7 s per call); a small token cap makes
+        # `content` come back null. The cap only limits runaways: you pay for tokens actually used.
         self.effort = os.getenv("META_REASONING", "minimal")
-        self.max_tokens = int(os.getenv("META_MAX_TOKENS", "300"))
+        self.max_tokens = int(os.getenv("META_MAX_TOKENS", "4000"))
         self.seed = int(os.getenv("META_SEED", "1"))
-        self.timeout = float(os.getenv("META_TIMEOUT", "15"))
+        self.timeout = float(os.getenv("META_TIMEOUT", "60"))
         self.client = client or httpx.Client(timeout=self.timeout)
-        self.usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
+        self.usage = {"calls": 0, "cache_hits": 0, "prompt_tokens": 0, "completion_tokens": 0,
                       "reasoning_tokens": 0, "null_content": 0}
         self._lock = threading.Lock()
+        # Memo of raw replies by exact request (model, effort, seed, messages). Identical prompts occur in
+        # several defenses (e.g. none/check) and in re-runs; reusing the reply keeps paired comparisons exact,
+        # and the optional JSONL file makes an interrupted or repeated run free. Null replies are never cached.
+        self._memo: dict[str, str] = {}
+        self._cache_path = Path(cache_path) if cache_path else None
+        if self._cache_path and self._cache_path.exists():
+            for line in self._cache_path.read_text(encoding="utf-8").splitlines():
+                try:
+                    d = json.loads(line)
+                    self._memo[d["k"]] = d["c"]
+                except (ValueError, KeyError):
+                    continue
 
     def _post(self, body: dict) -> dict:
         last = None
@@ -111,9 +126,21 @@ class MetaPlanner:
                 time.sleep(1.0 * (attempt + 1))
         raise PlannerError(f"API unavailable after retries ({last})")
 
+    def _key(self, messages: list[dict]) -> str:
+        blob = json.dumps({"m": self.model, "e": self.effort, "s": self.seed, "msgs": messages}, sort_keys=True)
+        return hashlib.sha256(blob.encode()).hexdigest()
+
     def plan(self, obs: dict, mode: str) -> str:
+        messages = build_messages(obs, mode)
+        key = self._key(messages)
+        with self._lock:
+            hit = self._memo.get(key)
+            if hit is not None:
+                self.usage["cache_hits"] += 1
+        if hit is not None:
+            return _parse_action(hit)
         body = {
-            "model": self.model, "messages": build_messages(obs, mode),
+            "model": self.model, "messages": messages,
             "temperature": 0, "seed": self.seed,
             "reasoning_effort": self.effort, "max_completion_tokens": self.max_tokens,
         }
@@ -130,6 +157,12 @@ class MetaPlanner:
             self.usage["reasoning_tokens"] += (u.get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0
             if content is None:
                 self.usage["null_content"] += 1
+            else:
+                self._memo[key] = content
+                if self._cache_path:
+                    self._cache_path.parent.mkdir(parents=True, exist_ok=True)
+                    with self._cache_path.open("a", encoding="utf-8") as f:
+                        f.write(json.dumps({"k": key, "c": content}) + "\n")
         return _parse_action(content)
 
 
@@ -162,11 +195,11 @@ _meta_cache: dict[str, MetaPlanner] = {}
 _meta_lock = threading.Lock()
 
 
-def get_planner(prefer_meta: bool = True, model: str | None = None):
+def get_planner(prefer_meta: bool = True, model: str | None = None, cache_path=None):
     if prefer_meta and meta_configured():
-        key = model or os.environ["META_MODEL"]
-        with _meta_lock:  # one shared httpx.Client per model (connection reuse)
+        key = f"{model or os.environ['META_MODEL']}|{cache_path}"
+        with _meta_lock:  # one shared httpx.Client per (model, cache file): connection reuse
             if key not in _meta_cache:
-                _meta_cache[key] = MetaPlanner(model)
+                _meta_cache[key] = MetaPlanner(model, cache_path=cache_path)
             return _meta_cache[key]
     return MockPlanner()

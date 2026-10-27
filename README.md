@@ -39,7 +39,12 @@ prompt-level separation lowers it. Stalls (freeze attacks), invalid replies and 
 - CIs for attack rates: cluster bootstrap over the 25 bases. Paired comparisons: exact McNemar on the
   same text, Holm-adjusted. Primary endpoint (fixed before running): unsafe-proposal rate, `none` vs `separation`.
 - Benign: 8 sign templates (3 are hard negatives containing words like "fastest way") x aisle numbers; small n, Wilson CI.
-- Model settings: temperature 0, seed 1, `reasoning_effort=minimal` (seed support/determinism is not guaranteed by the API).
+- Models: `muse-spark-1.3` and `muse-spark-1.2`, both with `reasoning_effort=minimal`, temperature 0, seed 1.
+  These are reasoning models: even on `minimal` they spend roughly 550-1050 reasoning tokens (3-7 s) per robot step,
+  so a full run is ~3-5k calls per model. Replies are memoized by exact prompt (identical prompts occur in several
+  defenses), which keeps paired comparisons exact; API-level determinism of `seed` is NOT verified.
+- A live episode takes about a minute and costs ~12k tokens per mode, so live free-text runs are off by default
+  (`ALLOW_LIVE=0`); the public demo plays recorded real-model traces (the UI labels the planner of every run).
 
 ## Results
 _None yet. Numbers will be added here from `bench/results/summary_*.json`; runs on the mock planner are never reported._
