@@ -57,8 +57,9 @@ def select(items: list, n: int) -> list:
     return [items[i * len(items) // n] for i in range(n)]
 
 
-def make_tasks(n_attack: int, n_benign: int) -> list[dict]:
-    atk = [{"kind": "attack", **r} for r in select(datasets.attack_records(), n_attack)]
+def make_tasks(n_attack: int, n_benign: int, attack_set: str = "core") -> list[dict]:
+    recs = datasets.extra_attack_records() if attack_set == "extra" else datasets.attack_records()
+    atk = [{"kind": "attack", **r} for r in select(recs, n_attack)]
     ben = []
     for t in datasets.benign(n_benign):
         tpl = datasets.BENIGN_T[len(ben) % len(datasets.BENIGN_T)]
@@ -182,6 +183,8 @@ def main():
     ap.add_argument("--model", default=None)
     ap.add_argument("--n-attack", type=int, default=100, help="max 100 (25 bases x 4 wrappers)")
     ap.add_argument("--n-benign", type=int, default=24)
+    ap.add_argument("--attack-set", choices=["core", "extra"], default="core",
+                    help="core = B1-B5 (100 texts); extra = B6 pressure and B7 fake-reasoning signs (40 texts)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--max-seconds", type=float, default=240.0, help="wall-clock limit per episode")
     ap.add_argument("--defenses", default=",".join(DEFENSES),
@@ -204,7 +207,7 @@ def main():
     cache_path = None if (a.no_cache or a.planner == "mock") else out / f"prompt_cache_{model_name}.jsonl"
     planner = MockPlanner() if a.planner == "mock" else get_planner(True, a.model, cache_path=cache_path)
     label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else f"meta:{planner.model}"
-    tasks = make_tasks(a.n_attack, a.n_benign)
+    tasks = make_tasks(a.n_attack, a.n_benign, a.attack_set)
     stamp = time.strftime("%Y%m%d_%H%M%S")
     jsonl = out / f"episodes_{planner.name}_{stamp}.jsonl"
     t0 = time.time()
@@ -213,7 +216,7 @@ def main():
     meta = {"planner": label, "model": a.model or getattr(planner, "model", None),
             "reasoning_effort": getattr(planner, "effort", None), "calls": calls,
             "stop_reason": stopped, "usage": planner.usage, "reasoning_effort_note": "see usage.reasoning_tokens", "seconds": round(time.time() - t0, 1),
-            "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign, "defenses": list(modes)}
+            "attack_set": a.attack_set, "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign, "defenses": list(modes)}
     (out / f"summary_{planner.name}_{stamp}.json").write_text(json.dumps({"meta": meta, "summary": summ}, indent=1))
     print(f"Planner: {label}  model calls: {calls}  tokens: {planner.usage}"
           + (f"\n  [{stopped}]" if stopped else ""))

@@ -31,7 +31,8 @@ def build_messages(obs: dict, mode: str) -> list[dict]:
         raise ValueError(f"unknown mode {mode!r}")
     system = BASE_SYSTEM + (HARDEN_RULE if mode in ("hardened", "separation", "firewall") else "")
     detections = obs.get("detections") or []
-    cam = "; ".join(f"{d['label']} at ({d['x']},{d['y']})" for d in detections) or "nothing"
+    cam = "; ".join(f"{d['label']} at ({d['x']},{d['y']})" + (f" (confidence {d['conf']})" if "conf" in d else "")
+                    for d in detections) or "nothing"
     head = (
         f"Robot at ({obs['pos'][0]},{obs['pos'][1]}), Loading Dock at "
         f"({obs['goal'][0]},{obs['goal'][1]}).\nTrusted map (x right, y down):\n{obs['map']}\n"

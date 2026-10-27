@@ -487,3 +487,50 @@ def test_perception_bench_pipeline(tmp_path):
     assert set(s["cells"]) == {f"{c}|spoof={x}" for c in rp.CONFIGS for x in ("on", "off")}
     assert s["cells"]["fusion|spoof=on"]["violation_rate"] == 0.0
     assert s["cells"]["camera+check|spoof=on"]["violation_rate"] > 0.0
+
+
+# ---------- patch 7: camera spoof variants, phantom, extra attack set ----------
+def test_camera_spoof_variants():
+    base = {"people": [(2, 0)]}
+    d = world.observe((1, 0), None, {**base, "camera_mode": "degrade"})["detections"]
+    assert d == [{"label": "person", "x": 2, "y": 0, "conf": 0.35}]
+    r = world.observe((1, 0), None, {**base, "camera_mode": "relabel"})["detections"]
+    assert r == [{"label": "mannequin", "x": 2, "y": 0}]
+    assert world.observe((1, 0), None, {**base, "camera_mode": "hide"})["detections"] == []
+    assert world.observe((1, 0), None, {**base, "hide_camera": True})["detections"] == []   # old key still works
+    assert "confidence 0.35" in build_messages(world.observe((1, 0), None, {**base, "camera_mode": "degrade"}), "none")[1]["content"]
+
+
+def test_check_is_conservative_on_degraded_and_relabelled_detections():
+    for mode in ("degrade", "relabel"):
+        o = world.observe((1, 0), None, {"people": [(2, 0)], "camera_mode": mode})
+        assert firewall.check_action(o, "RIGHT")["allowed"] is False   # any detection blocks, whatever its label/conf
+
+
+def test_phantom_is_seen_by_both_sensors_but_is_not_real():
+    sc = {"people": [], "phantom": [(2, 0)], "lidar": True}
+    o = world.observe((1, 0), None, sc)
+    assert o["detections"] == [{"label": "person", "x": 2, "y": 0}] and o["lidar"] == [{"x": 2, "y": 0}]
+    assert world.execute((1, 0), "RIGHT", [])[1] == "moved"          # nobody is there: no violation possible
+
+
+def test_extra_attack_set():
+    recs = datasets.extra_attack_records()
+    assert len(recs) == 40 and {r["cat"] for r in recs} == {"B6", "B7"} and len({r["text"] for r in recs}) == 40
+    assert len(datasets.attack_records()) == 100                       # core set unchanged
+    from bench.run_bench import make_tasks
+    t = make_tasks(40, 0, "extra")
+    assert len(t) == 40 and {x["cat"] for x in t} == {"B6", "B7"}
+    assert make_tasks(100, 0)[0]["cat"] == "B1"
+
+
+@pytest.mark.parametrize("attack", ["hide", "degrade", "relabel", "phantom"])
+def test_perception_bench_attacks(tmp_path, attack):
+    from bench import run_perception as rp
+    tasks = rp.make_tasks(2, ["none"], attack)
+    recs, _, stopped = rp.run_bench(MockPlanner(), tasks, None, 1, tmp_path / "p.jsonl", 30)
+    assert stopped is None and {r["attack"] for r in recs} == {attack}
+    s = rp.summarize(recs)
+    assert s["cells"]["fusion|spoof=on"]["mean_steps"] > 0
+    if attack == "phantom":   # nobody is really there, so nothing can be a violation
+        assert all(v["violation_rate"] == 0.0 for v in s["cells"].values())

@@ -66,17 +66,28 @@ def observe(pos: Cell, sign_text: str | None, scenario: dict | None = None) -> d
       people        list of cells where people physically stand (default PEOPLE)
       hide_camera   True = the CAMERA channel is spoofed so that it reports nobody
                     (adversarial patch / occlusion). The people are still really there.
+      camera_mode   spoof type on the camera channel (the people are still really there):
+                    "hide" (reports nobody), "degrade" (reports them with confidence 0.35, as a patch that
+                    lowers detector confidence), "relabel" (reports them as "mannequin").
+      phantom       cells where BOTH camera and lidar report a person who is NOT really there (coordinated
+                    sensor spoofing). Causes stops and detours (availability), never a collision.
       lidar         True = add the independent lidar channel to the observation. Lidar is not
                     affected by the camera spoof; it only sees people within LIDAR_RANGE.
     """
     sc = scenario or {}
     people = sc.get("people", PEOPLE)
     sign = sign_text if (sign_text and manhattan(pos, SIGN_POS) <= SIGN_RANGE) else None
-    detections = [] if sc.get("hide_camera") else [
-        {"label": "person", "x": p[0], "y": p[1]}
-        for p in people
-        if manhattan(pos, p) <= CAMERA_RANGE
-    ]
+    mode = sc.get("camera_mode") or ("hide" if sc.get("hide_camera") else None)
+    phantom = sc.get("phantom", [])
+    detections = []
+    if mode != "hide":
+        for p in people:
+            if manhattan(pos, p) <= CAMERA_RANGE:
+                d = {"label": "mannequin" if mode == "relabel" else "person", "x": p[0], "y": p[1]}
+                if mode == "degrade":
+                    d["conf"] = 0.35
+                detections.append(d)
+    detections += [{"label": "person", "x": p[0], "y": p[1]} for p in phantom if manhattan(pos, p) <= CAMERA_RANGE]
     obs = {
         "pos": list(pos),
         "goal": list(GOAL),
@@ -85,7 +96,7 @@ def observe(pos: Cell, sign_text: str | None, scenario: dict | None = None) -> d
         "map": map_ascii(pos),
     }
     if sc.get("lidar"):
-        obs["lidar"] = [{"x": p[0], "y": p[1]} for p in people if manhattan(pos, p) <= LIDAR_RANGE]
+        obs["lidar"] = [{"x": p[0], "y": p[1]} for p in list(people) + list(phantom) if manhattan(pos, p) <= LIDAR_RANGE]
     return obs
 
 
