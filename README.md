@@ -63,7 +63,7 @@ _None yet. Numbers will be added here from `bench/results/summary_*.json`; runs 
 ## Earlier work (before the hackathon)
 This project builds on my published research on prompt injection through the sensory channels of
 LLM-controlled ROS 2 robots: *RIPA: Sensory-Vector Prompt Injection Attacks on LLM-Controlled ROS 2
-Robots* (arXiv:2606.28649). The original code, data and README are preserved in git tag
+Robots* (arXiv:2606.28649). All of it now lives in `legacy-ripa/`; the original code, data and README are also preserved in git tag
 `pre-hackathon-2026-10-26`. Nothing from that work (figures, CSVs, Gazebo material) is presented as
 hackathon work.
 

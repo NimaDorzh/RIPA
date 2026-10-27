@@ -16,3 +16,5 @@ venv/
 .github/agents/
 .clineignore
 *:Zone.Identifier
+.vscode/
+.vscode/
