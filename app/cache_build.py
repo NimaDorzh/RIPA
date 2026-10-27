@@ -13,10 +13,13 @@ import sys
 from . import presets
 from .episode import run_episode
 from .main import CACHE_PATH
-from .planner import MockPlanner, get_planner
+from .planner import MockPlanner, get_planner, meta_configured
 
 
 def build(force_mock: bool = False) -> dict:
+    if not force_mock and not meta_configured():
+        raise SystemExit("META_API_BASE / META_API_KEY / META_MODEL are not set (see .env.example). "
+                         "Use --mock only for offline stand-in traces.")
     planner = MockPlanner() if force_mock else get_planner(prefer_meta=True)
     cache = {}
     for p in presets.PRESETS:

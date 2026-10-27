@@ -35,7 +35,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from app.episode import run_episode
-from app.planner import MockPlanner, get_planner
+from app.planner import MockPlanner, get_planner, meta_configured
 from app.prompts import CHECK_MODES
 from bench import datasets
 from bench.stats import cluster_bootstrap_ci, holm, mcnemar_exact, wilson
@@ -162,8 +162,11 @@ def main():
     ap.add_argument("--budget-calls", type=int, default=None,
                     help="stop starting new episodes after this many model calls (protects credits)")
     a = ap.parse_args()
+    if a.planner == "meta" and not meta_configured():
+        raise SystemExit("--planner meta needs META_API_BASE, META_API_KEY and META_MODEL "
+                         "(fill them in .env); refusing to fall back to the mock planner.")
     planner = MockPlanner() if a.planner == "mock" else get_planner(True, a.model)
-    label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else planner.name
+    label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else f"meta:{planner.model}"
     tasks = make_tasks(a.n_attack, a.n_benign)
     out = Path("bench/results")
     out.mkdir(parents=True, exist_ok=True)

@@ -1,4 +1,5 @@
 import json
+import sys
 
 import httpx
 import pytest
@@ -271,3 +272,32 @@ def test_proxy_ip_only_when_trusted(client, monkeypatch):
     main._hits.clear(); monkeypatch.setattr(main, "TRUST_PROXY", True)
     assert client.post("/api/run", json={"sign_text": "a"}, headers=h("1.1.1.1")).status_code == 200
     assert client.post("/api/run", json={"sign_text": "a"}, headers=h("2.2.2.2")).status_code == 200
+
+
+# ---------- config loading / fail-loud ----------
+def test_dotenv_loader_does_not_override_and_skips_empty(tmp_path, monkeypatch):
+    import app
+    f = tmp_path / ".env"
+    f.write_text("# c\nFOO_A=1\nFOO_B=\nFOO_C='x y'\nFOO_D=from_file\n")
+    for k in ("FOO_A", "FOO_B", "FOO_C"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("FOO_D", "from_env")
+    app._load_dotenv(f)
+    import os
+    assert os.environ["FOO_A"] == "1" and os.environ["FOO_C"] == "x y"
+    assert "FOO_B" not in os.environ and os.environ["FOO_D"] == "from_env"
+    for k in ("FOO_A", "FOO_C"):
+        monkeypatch.delenv(k, raising=False)
+
+
+def test_bench_and_cache_refuse_silent_mock_fallback(monkeypatch):
+    for k in ("META_API_BASE", "META_API_KEY", "META_MODEL"):
+        monkeypatch.delenv(k, raising=False)
+    from app import cache_build
+    from bench import run_bench
+    monkeypatch.setattr(sys, "argv", ["run_bench", "--planner", "meta"])
+    with pytest.raises(SystemExit) as e:
+        run_bench.main()
+    assert "refusing to fall back" in str(e.value)
+    with pytest.raises(SystemExit):
+        cache_build.build(force_mock=False)
