@@ -10,3 +10,7 @@ venv/
 *.deb
 *.pyc
 .env
+
+# local tooling
+.claude/
+.github/agents/
