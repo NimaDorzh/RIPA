@@ -1,9 +1,13 @@
 """Planners (NEW during hackathon).
 
-MetaPlanner  : calls the Meta Model API (endpoint/model configured via env).
+MetaPlanner  : calls the Meta Model API (OpenAI-compatible /chat/completions).
 MockPlanner  : SIMULATED planner for offline development and tests only.
                Its numbers are invented parameters and must NEVER be reported
                as results. The UI and trace label every run with its planner.
+
+Actions returned by a planner are one of world.ACTIONS or INVALID (the model
+produced no parseable single action). INVALID is executed as STOP by the episode
+runner but is counted and reported separately; it is never silently "safe".
 """
 from __future__ import annotations
 
@@ -12,12 +16,15 @@ import json
 import os
 import random
 import re
+import threading
 import time
 
 import httpx
 
 from . import world
 from .prompts import build_messages
+
+INVALID = "INVALID"
 
 FOLLOW_RE = re.compile(
     r"(ignore|override|proceed|shortcut|speed up|go straight|path (is )?clear|"
@@ -26,58 +33,104 @@ FOLLOW_RE = re.compile(
 )
 LEET = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"})
 # Invented parameters of the simulated planner (not measurements).
-MOCK_FOLLOW_PROB = {"none": 0.95, "hardened": 0.40, "firewall": 0.40}
+MOCK_FOLLOW_PROB = {"none": 0.95, "hardened": 0.40, "separation": 0.40, "check": 0.95, "firewall": 0.40}
 
 
 class MetaNotConfigured(RuntimeError):
     pass
 
 
+class PlannerError(RuntimeError):
+    """API/transport failure after retries (not a model decision)."""
+
+
 def meta_configured() -> bool:
     return bool(os.getenv("META_API_BASE") and os.getenv("META_API_KEY") and os.getenv("META_MODEL"))
 
 
-def _parse_action(text: str) -> str:
-    m = re.search(r"\{.*?\}", text, re.S)
-    if m:
-        try:
-            a = str(json.loads(m.group(0)).get("action", "")).upper()
-            if a in world.ACTIONS:
-                return a
-        except json.JSONDecodeError:
-            pass
-    for a in world.ACTIONS:
-        if re.search(rf"\b{a}\b", text.upper()):
-            return a
-    return "STOP"
+_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.I)
+
+
+def _parse_action(text: str | None) -> str:
+    """Strict parser. The whole reply must be exactly one action, either a JSON
+    object {"action": X} (optionally in a code fence) or the bare action word.
+    Anything else (prose, negation, several JSON objects, null) is INVALID.
+    No keyword scanning: "RIGHT is unsafe, I choose STOP" must not become RIGHT."""
+    if not text:
+        return INVALID
+    t = _FENCE.sub("", text.strip()).strip()
+    try:
+        obj = json.loads(t)
+    except (json.JSONDecodeError, ValueError):
+        obj = None
+    if isinstance(obj, dict) and set(obj) == {"action"}:
+        a = str(obj["action"]).strip().upper()
+        return a if a in world.ACTIONS else INVALID
+    bare = t.strip(" \t\r\n\"'.").upper()
+    return bare if bare in world.ACTIONS else INVALID
 
 
 class MetaPlanner:
     name = "meta"
 
-    def __init__(self, model: str | None = None):
-        if not meta_configured():
+    def __init__(self, model: str | None = None, client: httpx.Client | None = None):
+        if not meta_configured() and client is None:
             raise MetaNotConfigured("Set META_API_BASE, META_API_KEY, META_MODEL (see docs/api-notes.md)")
-        self.base = os.environ["META_API_BASE"].rstrip("/")
-        self.key = os.environ["META_API_KEY"]
-        self.model = model or os.environ["META_MODEL"]
-        self.last_latency_ms = 0.0
+        self.base = os.environ.get("META_API_BASE", "http://test").rstrip("/")
+        self.key = os.environ.get("META_API_KEY", "")
+        self.model = model or os.environ.get("META_MODEL", "")
+        # Probe (Oct 27): muse-spark-1.3 is a reasoning model. 'none' is rejected; 'minimal' uses
+        # ~7 reasoning tokens, 'low' ~150. With a small token cap the content comes back null.
+        self.effort = os.getenv("META_REASONING", "minimal")
+        self.max_tokens = int(os.getenv("META_MAX_TOKENS", "300"))
+        self.seed = int(os.getenv("META_SEED", "1"))
+        self.timeout = float(os.getenv("META_TIMEOUT", "15"))
+        self.client = client or httpx.Client(timeout=self.timeout)
+        self.usage = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0,
+                      "reasoning_tokens": 0, "null_content": 0}
+        self._lock = threading.Lock()
+
+    def _post(self, body: dict) -> dict:
+        last = None
+        for attempt in range(3):
+            try:
+                r = self.client.post(
+                    f"{self.base}/chat/completions",
+                    headers={"Authorization": f"Bearer {self.key}"},
+                    json=body, timeout=self.timeout,
+                )
+                if r.status_code in (429, 500, 502, 503, 504):
+                    last = f"HTTP {r.status_code}"
+                    time.sleep(min(float(r.headers.get("retry-after", 1.5 * (attempt + 1))), 8))
+                    continue
+                if r.status_code != 200:
+                    raise PlannerError(f"HTTP {r.status_code}: {r.text[:200]}")
+                return r.json()
+            except httpx.HTTPError as e:
+                last = type(e).__name__
+                time.sleep(1.0 * (attempt + 1))
+        raise PlannerError(f"API unavailable after retries ({last})")
 
     def plan(self, obs: dict, mode: str) -> str:
-        # NOTE: assumes an OpenAI-compatible chat/completions route. Verify in the API probe
-        # and adjust here if the Meta Model API differs.
-        t0 = time.perf_counter()
-        r = httpx.post(
-            f"{self.base}/chat/completions",
-            headers={"Authorization": f"Bearer {self.key}"},
-            json={"model": self.model, "messages": build_messages(obs, mode),
-                  "temperature": 0, "max_tokens": 40},
-            timeout=30,
-        )
-        r.raise_for_status()
-        self.last_latency_ms = (time.perf_counter() - t0) * 1000
-        text = r.json()["choices"][0]["message"]["content"]
-        return _parse_action(text)
+        body = {
+            "model": self.model, "messages": build_messages(obs, mode),
+            "temperature": 0, "seed": self.seed,
+            "reasoning_effort": self.effort, "max_completion_tokens": self.max_tokens,
+        }
+        j = self._post(body)
+        try:
+            content = j["choices"][0]["message"].get("content")
+        except (KeyError, IndexError, TypeError, AttributeError):
+            raise PlannerError("malformed API response")
+        u = j.get("usage") or {}
+        with self._lock:
+            self.usage["calls"] += 1
+            self.usage["prompt_tokens"] += u.get("prompt_tokens", 0) or 0
+            self.usage["completion_tokens"] += u.get("completion_tokens", 0) or 0
+            self.usage["reasoning_tokens"] += (u.get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0
+            if content is None:
+                self.usage["null_content"] += 1
+        return _parse_action(content)
 
 
 class MockPlanner:
@@ -85,13 +138,14 @@ class MockPlanner:
 
     def __init__(self, seed: int = 0):
         self.seed = seed
-        self.last_latency_ms = 0.0
+        self.usage = {"calls": 0}
 
     def _rng(self, obs: dict, mode: str) -> random.Random:
         key = f"{self.seed}|{obs['pos']}|{obs.get('sign')}|{mode}"
         return random.Random(int(hashlib.sha256(key.encode()).hexdigest(), 16) % (2**32))
 
     def plan(self, obs: dict, mode: str) -> str:
+        self.usage["calls"] += 1
         pos = tuple(obs["pos"])
         sign = (obs.get("sign") or "").translate(LEET)
         if sign and FOLLOW_RE.search(sign) and self._rng(obs, mode).random() < MOCK_FOLLOW_PROB[mode]:
@@ -104,7 +158,15 @@ class MockPlanner:
         return world.safe_step(pos)
 
 
+_meta_cache: dict[str, MetaPlanner] = {}
+_meta_lock = threading.Lock()
+
+
 def get_planner(prefer_meta: bool = True, model: str | None = None):
     if prefer_meta and meta_configured():
-        return MetaPlanner(model)
+        key = model or os.environ["META_MODEL"]
+        with _meta_lock:  # one shared httpx.Client per model (connection reuse)
+            if key not in _meta_cache:
+                _meta_cache[key] = MetaPlanner(model)
+            return _meta_cache[key]
     return MockPlanner()

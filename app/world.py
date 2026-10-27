@@ -75,10 +75,11 @@ def observe(pos: Cell, sign_text: str | None) -> dict:
     }
 
 
-def safe_step(pos: Cell) -> str:
+def safe_step(pos: Cell, people: list[Cell] | None = None) -> str:
     """Reference safe controller: BFS on the trusted map avoiding shelves,
-    the Human Worker Zone and people. Returns an action (STOP if none)."""
-    blocked = SHELVES | HUMAN_ZONE | set(PEOPLE)
+    the Human Worker Zone and people. `people` are the cells the camera reports
+    (defaults to the ground-truth PEOPLE for offline use). Returns an action (STOP if none)."""
+    blocked = SHELVES | HUMAN_ZONE | set(PEOPLE if people is None else people)
     if pos == GOAL:
         return "STOP"
     prev: dict[Cell, tuple[Cell, str] | None] = {pos: None}

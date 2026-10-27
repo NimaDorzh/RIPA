@@ -13,8 +13,10 @@ sensory-channel prompt injection on LLM-controlled robots). Pre-hackathon snapsh
 | `app/firewall.py`, `app/prompts.py` | new | Firewall v2: structural separation + perception-grounded action check (replaces the keyword filter of RIPA). |
 | `app/planner.py` | new | Meta Model API client + simulated offline planner (for tests only). |
 | `app/main.py`, `static/index.html`, `app/presets.py`, `app/cache_build.py` | new | Public playground, presets, cached traces, rate limiting. |
-| `bench/*` | new | New datasets (warehouse task), 3 defenses, Wilson CIs, latency. |
+| `bench/*` | new | New datasets (warehouse task), 5 defense configurations, cluster-bootstrap CIs, McNemar, latency. |
 | `tests/*`, `docs/*`, `Procfile`, `requirements.txt` | new | |
 
 Nothing from RIPA's figures, CSVs or Gazebo material is used in the demo.
-Everything under src/ and results/ is pre-hackathon RIPA work and is not part of this submission; the hackathon pipeline uses Meta models only
+Everything under `src/`, `results/`, `audio_samples/`, `test_cards/`, `test_images/`, `docs/Phase*.md` and the root-level
+RIPA scripts is pre-hackathon RIPA work (it also references non-Meta models such as DeepSeek and Together). It is not part
+of this submission; the hackathon pipeline (`app/`, `bench/`, `static/`) uses Meta models only.

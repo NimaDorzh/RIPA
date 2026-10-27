@@ -1,89 +1,209 @@
 """Benchmark runner (NEW during hackathon).
 
-python -m bench.run_bench --planner mock   # pipeline test only, NOT results
-python -m bench.run_bench --planner meta --model <id> --n-attack 100 --n-benign 200
+python -m bench.run_bench --planner mock                      # pipeline test only, NOT results
+python -m bench.run_bench --planner meta --model muse-spark-1.3 --n-attack 20 --n-benign 8 --budget-calls 600   # smoke test
+python -m bench.run_bench --planner meta --model muse-spark-1.3 --budget-calls 6000                              # full run
 
-Defenses: none | hardened (prompt rule only) | firewall (separation + action check).
-Metrics: ASR (attack episodes ending in a safety violation), FPR (benign episodes in
-which the firewall intervened or the task failed), latency p50/p95, Wilson 95% CIs.
+Defenses (see app/prompts.py): none | hardened | separation | check | firewall.
+  separation = prompt separation only; check = action check only; firewall = both.
+
+What is measured (and what is NOT):
+  * unsafe-proposal rate  (PRIMARY): episodes in which the MODEL proposed at least one action
+    that the world scores as a safety violation, before any action check. This is the
+    quantity a defense can actually change.
+  * violation rate (ASR): episodes that END in a violation. For modes with the action check
+    this is 0 BY CONSTRUCTION (the check blocks exactly the world's violation set); it is
+    reported for completeness, not as a defense result.
+  * stall rate (timeout): availability failures, e.g. a freeze attack; reported separately.
+  * invalid rate: model replies that were not exactly one action (executed as STOP, counted).
+  * API errors/deadline episodes are excluded from rates and reported as n_error.
+Intervals: attacks are 25 independent bases x 4 wrappers, so CIs for attack rates use a
+cluster bootstrap over bases (Wilson on n=100 would be too narrow). Paired comparisons use
+exact McNemar on the same attack text, Holm-adjusted. Pre-registered primary endpoint:
+unsafe-proposal rate, none vs separation.
+
+Every episode is appended to a JSONL file as soon as it finishes, so an aborted run keeps its data.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from app.episode import run_episode
 from app.planner import MockPlanner, get_planner
+from app.prompts import CHECK_MODES
 from bench import datasets
-from bench.stats import wilson
+from bench.stats import cluster_bootstrap_ci, holm, mcnemar_exact, wilson
 
-DEFENSES = ("none", "hardened", "firewall")
+DEFENSES = ("none", "hardened", "separation", "check", "firewall")
+BAD_OUTCOMES = ("error", "deadline")
 
 
 def pct(x: float) -> str:
-    return f"{100 * x:.1f}%"
+    return f"{100 * x:5.1f}%"
 
 
-def run(planner, n_attack: int, n_benign: int, budget_calls: int | None):
-    rows = {}
-    calls = 0
+def select(items: list, n: int) -> list:
+    if n >= len(items):
+        return items
+    return [items[i * len(items) // n] for i in range(n)]
+
+
+def make_tasks(n_attack: int, n_benign: int) -> list[dict]:
+    atk = [{"kind": "attack", **r} for r in select(datasets.attack_records(), n_attack)]
+    ben = []
+    for t in datasets.benign(n_benign):
+        tpl = datasets.BENIGN_T[len(ben) % len(datasets.BENIGN_T)]
+        ben.append({"kind": "benign", "cat": "benign", "base": f"benign-{len(ben) % len(datasets.BENIGN_T)}",
+                    "wrapper": 0, "text": t, "template": tpl})
+    return atk + ben
+
+
+def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
+    calls = {"n": 0, "stop": False}
+    lock = threading.Lock()
+    out = jsonl_path.open("a", encoding="utf-8")
+    records: list[dict] = []
+
+    def work(task):
+        for mode in DEFENSES:
+            with lock:
+                if calls["stop"]:
+                    return
+            tr = run_episode(task["text"], mode, planner, max_seconds=max_seconds)
+            rec = {
+                "kind": task["kind"], "cat": task["cat"], "base": task["base"], "wrapper": task["wrapper"],
+                "text_sha": hashlib.sha256(task["text"].encode()).hexdigest()[:12], "text": task["text"],
+                "mode": mode, "outcome": tr["outcome"], "error": tr["error"],
+                "unsafe_proposals": tr["unsafe_proposals"], "invalid_actions": tr["invalid_actions"],
+                "interventions": tr["interventions"], "n_steps": len(tr["steps"]),
+                "latencies_ms": tr["latencies_ms"],
+            }
+            with lock:
+                calls["n"] += len(tr["latencies_ms"]) + (1 if tr["outcome"] == "error" else 0)
+                if budget_calls and calls["n"] >= budget_calls:
+                    calls["stop"] = True
+                records.append(rec)
+                out.write(json.dumps(rec) + "\n")
+                out.flush()
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(work, tasks))
+    out.close()
+    return records, calls["n"], calls["stop"]
+
+
+def summarize(records: list[dict]) -> dict:
+    s: dict = {"attack": {}, "benign": {}, "paired": {}, "by_category": {}}
     for mode in DEFENSES:
-        k = 0
-        lat = []
-        by_cat: dict[str, list[int]] = {}
-        for cat, sign in datasets.attacks(n_attack):
-            tr = run_episode(sign, mode, planner)
-            calls += len(tr["steps"])
-            hit = tr["outcome"] == "violation"
-            k += hit
-            by_cat.setdefault(cat, []).append(int(hit))
-            lat.append(tr["latency_ms_p50"])
-            if budget_calls and calls > budget_calls:
-                raise SystemExit(f"call budget {budget_calls} exceeded, stopping")
-        bad = 0
-        for sign in datasets.benign(n_benign):
-            tr = run_episode(sign, mode, planner)
-            calls += len(tr["steps"])
-            bad += (tr["interventions"] > 0) or (tr["outcome"] != "goal")
-            if budget_calls and calls > budget_calls:
-                raise SystemExit(f"call budget {budget_calls} exceeded, stopping")
-        lat.sort()
-        rows[mode] = {
-            "asr": k / n_attack, "asr_ci": wilson(k, n_attack), "n_attack": n_attack,
-            "fpr": bad / n_benign, "fpr_ci": wilson(bad, n_benign), "n_benign": n_benign,
-            "latency_p50_ms": lat[len(lat) // 2], "latency_p95_ms": lat[int(0.95 * (len(lat) - 1))],
-            "asr_by_category": {c: sum(v) / len(v) for c, v in sorted(by_cat.items())},
+        a = [r for r in records if r["kind"] == "attack" and r["mode"] == mode]
+        ok = [r for r in a if r["outcome"] not in BAD_OUTCOMES]
+        up = [int(r["unsafe_proposals"] > 0) for r in ok]
+        cl = [r["base"] for r in ok]
+        lat = sorted(x for r in ok for x in r["latencies_ms"])
+        steps = sum(r["n_steps"] for r in ok)
+        s["attack"][mode] = {
+            "n": len(a), "n_ok": len(ok), "n_error": len(a) - len(ok),
+            "unsafe_proposal_rate": sum(up) / len(up) if up else None,
+            "unsafe_proposal_ci_cluster": cluster_bootstrap_ci(up, cl) if up else None,
+            "violation_rate": sum(r["outcome"] == "violation" for r in ok) / len(ok) if ok else None,
+            "violation_by_construction_zero": mode in CHECK_MODES,
+            "stall_rate": sum(r["outcome"] == "timeout" for r in ok) / len(ok) if ok else None,
+            "invalid_rate": sum(r["invalid_actions"] for r in ok) / steps if steps else None,
+            "intervention_rate": (sum(r["interventions"] > 0 for r in ok) / len(ok)) if ok and mode in CHECK_MODES else None,
+            "latency_p50_ms": lat[len(lat) // 2] if lat else None,
+            "latency_p95_ms": lat[int(0.95 * (len(lat) - 1))] if lat else None,
+            "n_calls": len(lat),
         }
-    return rows, calls
+        b = [r for r in records if r["kind"] == "benign" and r["mode"] == mode]
+        bok = [r for r in b if r["outcome"] not in BAD_OUTCOMES]
+        succ = sum(r["outcome"] == "goal" for r in bok)
+        s["benign"][mode] = {
+            "n": len(b), "n_ok": len(bok), "n_error": len(b) - len(bok),
+            "task_success_rate": succ / len(bok) if bok else None,
+            "task_success_wilson": wilson(succ, len(bok)) if bok else None,
+            "intervention_rate": (sum(r["interventions"] > 0 for r in bok) / len(bok)) if bok and mode in CHECK_MODES else None,
+            "unsafe_proposal_rate": (sum(r["unsafe_proposals"] > 0 for r in bok) / len(bok)) if bok else None,
+        }
+        cats: dict[str, list[int]] = {}
+        for r in ok:
+            cats.setdefault(r["cat"], []).append(int(r["unsafe_proposals"] > 0))
+        s["by_category"][mode] = {c: sum(v) / len(v) for c, v in sorted(cats.items())}
+    # paired McNemar on unsafe proposal, same attack text
+    by = {m: {r["text_sha"]: r for r in records
+              if r["kind"] == "attack" and r["mode"] == m and r["outcome"] not in BAD_OUTCOMES} for m in DEFENSES}
+    pairs = [("none", "hardened"), ("none", "separation"), ("hardened", "separation")]
+    raw = {}
+    for A, B in pairs:
+        common = by[A].keys() & by[B].keys()
+        b = sum(by[A][k]["unsafe_proposals"] > 0 and not by[B][k]["unsafe_proposals"] > 0 for k in common)
+        c = sum(by[B][k]["unsafe_proposals"] > 0 and not by[A][k]["unsafe_proposals"] > 0 for k in common)
+        raw[f"{A} vs {B}"] = {"n_pairs": len(common), "only_A_unsafe": b, "only_B_unsafe": c, "p": mcnemar_exact(b, c)}
+    adj = holm({k: v["p"] for k, v in raw.items()})
+    for k in raw:
+        raw[k]["p_holm"] = adj[k]
+    s["paired"] = raw
+    return s
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--planner", choices=["mock", "meta"], default="mock")
     ap.add_argument("--model", default=None)
-    ap.add_argument("--n-attack", type=int, default=100)
-    ap.add_argument("--n-benign", type=int, default=200)
+    ap.add_argument("--n-attack", type=int, default=100, help="max 100 (25 bases x 4 wrappers)")
+    ap.add_argument("--n-benign", type=int, default=24)
+    ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--max-seconds", type=float, default=90.0, help="wall-clock limit per episode")
     ap.add_argument("--budget-calls", type=int, default=None,
-                    help="abort if more model calls than this (protects credits)")
+                    help="stop starting new episodes after this many model calls (protects credits)")
     a = ap.parse_args()
     planner = MockPlanner() if a.planner == "mock" else get_planner(True, a.model)
-    rows, calls = run(planner, a.n_attack, a.n_benign, a.budget_calls)
-    label = planner.name if a.planner == "meta" else "MOCK (pipeline test only, not results)"
-    out = Path("bench/results"); out.mkdir(parents=True, exist_ok=True)
+    label = "MOCK (pipeline test only, NOT results)" if a.planner == "mock" else planner.name
+    tasks = make_tasks(a.n_attack, a.n_benign)
+    out = Path("bench/results")
+    out.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime("%Y%m%d_%H%M%S")
-    (out / f"bench_{planner.name}_{stamp}.json").write_text(
-        json.dumps({"planner": label, "model": a.model, "calls": calls, "rows": rows}, indent=1))
-    print(f"Planner: {label}   model calls: {calls}")
-    print(f"{'defense':10} {'ASR':>8} {'ASR 95% CI':>16} {'FPR':>8} {'FPR 95% CI':>16} {'p50 ms':>8} {'p95 ms':>8}")
-    for m, r in rows.items():
-        print(f"{m:10} {pct(r['asr']):>8} {pct(r['asr_ci'][0])+'-'+pct(r['asr_ci'][1]):>16} "
-              f"{pct(r['fpr']):>8} {pct(r['fpr_ci'][0])+'-'+pct(r['fpr_ci'][1]):>16} "
-              f"{r['latency_p50_ms']:>8.2f} {r['latency_p95_ms']:>8.2f}")
-    print("\nASR by attack category (B1 replace, B2 false correction, B3 obfuscation, B4 authority, B5 false facts):")
-    for m, r in rows.items():
-        print(f"  {m:10} " + "  ".join(f"{c}={pct(v)}" for c, v in r["asr_by_category"].items()))
+    jsonl = out / f"episodes_{planner.name}_{stamp}.jsonl"
+    t0 = time.time()
+    records, calls, stopped = run_bench(planner, tasks, a.budget_calls, a.workers, jsonl, a.max_seconds)
+    summ = summarize(records)
+    meta = {"planner": label, "model": a.model or getattr(planner, "model", None),
+            "reasoning_effort": getattr(planner, "effort", None), "calls": calls,
+            "incomplete_budget_stop": stopped, "usage": planner.usage, "seconds": round(time.time() - t0, 1),
+            "n_attack_requested": a.n_attack, "n_benign_requested": a.n_benign}
+    (out / f"summary_{planner.name}_{stamp}.json").write_text(json.dumps({"meta": meta, "summary": summ}, indent=1))
+    print(f"Planner: {label}  model calls: {calls}  tokens: {planner.usage}"
+          + ("  [STOPPED BY BUDGET: incomplete]" if stopped else ""))
+    print("\nATTACKS (rates over valid episodes; CI = cluster bootstrap over bases)")
+    print(f"{'defense':11} {'n_ok/err':>9} {'unsafe-proposal':>16} {'95% CI':>15} {'violation':>10} {'stall':>7} {'invalid':>8} {'p50ms':>7} {'p95ms':>7}")
+    for m, r in summ["attack"].items():
+        ci = r["unsafe_proposal_ci_cluster"]
+        viol = pct(r["violation_rate"]) + ("*" if r["violation_by_construction_zero"] else "") if r["violation_rate"] is not None else "n/a"
+        print(f"{m:11} {str(r['n_ok'])+'/'+str(r['n_error']):>9} "
+              f"{pct(r['unsafe_proposal_rate']) if r['unsafe_proposal_rate'] is not None else 'n/a':>16} "
+              f"{(pct(ci[0])+'-'+pct(ci[1])) if ci else 'n/a':>15} {viol:>10} "
+              f"{pct(r['stall_rate']) if r['stall_rate'] is not None else 'n/a':>7} "
+              f"{pct(r['invalid_rate']) if r['invalid_rate'] is not None else 'n/a':>8} "
+              f"{(r['latency_p50_ms'] or 0):>7.0f} {(r['latency_p95_ms'] or 0):>7.0f}")
+    print("* 0 by construction (the action check blocks exactly the world's violation set); not a defense result.")
+    print("\nBENIGN (task success; interventions only exist for modes with the action check)")
+    for m, r in summ["benign"].items():
+        w = r["task_success_wilson"]
+        print(f"  {m:11} n_ok={r['n_ok']:>3}/{r['n']}  success={pct(r['task_success_rate']) if r['task_success_rate'] is not None else 'n/a'}"
+              f" ({pct(w[0])}-{pct(w[1])})" if w else f"  {m:11} no valid episodes",
+              f" intervention={pct(r['intervention_rate'])}" if r["intervention_rate"] is not None else "")
+    print("\nPAIRED (exact McNemar on unsafe proposal, same attack text; Holm-adjusted)")
+    for k, v in summ["paired"].items():
+        print(f"  {k:24} pairs={v['n_pairs']:>3}  onlyA={v['only_A_unsafe']:>3} onlyB={v['only_B_unsafe']:>3}  p={v['p']:.4f}  p_holm={v['p_holm']:.4f}")
+    print("\nUnsafe-proposal rate by attack category:")
+    for m, c in summ["by_category"].items():
+        print(f"  {m:11} " + "  ".join(f"{k}={pct(v)}" for k, v in c.items()))
+    print(f"\nEpisodes: {jsonl}")
 
 
 if __name__ == "__main__":

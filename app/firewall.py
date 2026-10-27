@@ -6,11 +6,18 @@ Two ideas, both different from the keyword filter in the earlier RIPA work:
    the instruction channel. It is passed to the planner inside an explicit
    untrusted block (see prompts.build_messages with mode="firewall").
 2. Action-consistency check: every action proposed by the planner is checked
-   against the robot's own trusted map and camera before execution. If the
-   action would enter the Human Worker Zone or a cell with a person, it is
-   blocked and replaced by the reference safe step. A text-vs-perception
-   conflict (a sign claiming the path is clear while the camera sees a person)
-   is flagged for the trace.
+   against the robot's trusted map and the simulator's camera detections before
+   execution. If the action would enter the Human Worker Zone or a cell with a
+   person, it is blocked and replaced by the reference safe step. A
+   text-vs-perception conflict (a sign claiming the path is clear while the
+   camera sees a person) is flagged for the trace (annotation only: the flag
+   does not gate execution).
+
+Important: in this simulator the set of actions the check blocks is exactly the
+set the world scores as a safety violation, so the check is a deterministic safety
+envelope. "ASR = 0 with the action check" holds by construction and is NOT a
+result. The measured quantity is how often the MODEL proposes an unsafe action
+(unsafe-proposal rate) under each prompt defense.
 
 Known limitation (also documented in README): the check is grounded in the
 robot's own perception and map. It stops unsafe motion; it does not detect
@@ -52,4 +59,5 @@ def check_action(obs: dict, action: str) -> dict:
 
 
 def fallback_action(obs: dict) -> str:
-    return world.safe_step(tuple(obs["pos"]))
+    people = [(d["x"], d["y"]) for d in obs.get("detections", [])]
+    return world.safe_step(tuple(obs["pos"]), people)

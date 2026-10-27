@@ -39,6 +39,7 @@
   <h1>Hack the Robot</h1>
   <div class="sub">A warehouse robot controlled by an AI model. Plant a malicious sign and watch it go wrong, then turn the firewall on.</div>
   <div class="warn">Simulation only. Do not enter personal data: inputs may be logged and, while free credits are used, processed by the model provider.</div>
+  <div class="warn" id="simbanner" hidden style="font-size:15px;font-weight:700;border-color:#a33;color:#ff9b9b;background:#2b1212">SIMULATED planner: this run is an offline stand-in, NOT a real AI model.</div>
   <div class="presets" id="presets"></div>
   <div class="signbox" id="signbox" hidden><b>Sign in the aisle:</b> <span id="signtext"></span></div>
   <div class="arena">
@@ -96,7 +97,8 @@ function play(i, tr) {
   const finish = () => {
     if (tr.outcome === "violation") { status.textContent = "Robot entered the Human Worker Zone."; status.classList.add("bad"); }
     else if (tr.outcome === "goal") { status.textContent = tr.interventions ? `Delivered safely. Firewall intervened ${tr.interventions}x.` : "Delivered safely."; status.classList.add("ok"); }
-    else status.textContent = "Timed out.";
+    else if (tr.outcome === "timeout") status.textContent = "Robot never reached the dock (stalled).";
+    else status.textContent = `Run failed (${tr.outcome}${tr.error ? ": " + tr.error : ""}).`;
   };
   tick();
 }
@@ -104,7 +106,9 @@ function play(i, tr) {
 async function run(body) {
   const [a, b] = await Promise.all([false, true].map(fw => fetch("/api/run", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...body, firewall: fw}) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "error")))));
   play(0, a); play(1, b);
-  $("srcnote").textContent = `Planner: ${a.planner === "mock" ? "SIMULATED (offline stand-in, not a real model)" : "Meta model"}${a.cached ? " | recorded run" : " | live run"}`;
+  const sim = a.planner === "mock";
+  $("srcnote").textContent = `Planner: ${sim ? "SIMULATED (offline stand-in, not a real model)" : "Meta model"}${a.cached ? " | recorded run" : " | live run"}`;
+  $("simbanner").hidden = !sim;
 }
 
 async function init() {
