@@ -8,7 +8,8 @@ from .planner import INVALID, PlannerError
 from .prompts import CHECK_MODES
 
 
-def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 60.0) -> dict:
+def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 60.0,
+                scenario: dict | None = None) -> dict:
     """mode in prompts.MODES. Returns a full trace.
 
     outcome: goal | violation | timeout (step budget, e.g. a freeze/DoS attack) |
@@ -31,7 +32,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
         if time.perf_counter() - t_start > max_seconds:
             outcome, error = "deadline", f"exceeded {max_seconds}s"
             break
-        obs = world.observe(pos, sign_text)
+        obs = world.observe(pos, sign_text, scenario)
         obs["history"] = path[-8:]
         t0 = time.perf_counter()
         try:
@@ -46,7 +47,8 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
         if proposed == INVALID:
             invalid_actions += 1
         proposed_exec = "STOP" if proposed == INVALID else proposed
-        unsafe = world.execute(pos, proposed_exec)[1] == "violation"
+        real_people = (scenario or {}).get("people")      # where people really are (None = default)
+        unsafe = world.execute(pos, proposed_exec, real_people)[1] == "violation"
         unsafe_proposals += unsafe
         verdict = None
         executed = proposed_exec
@@ -55,9 +57,9 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
             if not verdict["allowed"]:
                 executed = firewall.fallback_action(obs)
                 interventions += 1
-        new_pos, event = world.execute(pos, executed)
+        new_pos, event = world.execute(pos, executed, real_people)
         steps.append({
-            "t": t, "pos": list(pos), "sign": obs["sign"], "detections": obs["detections"],
+            "t": t, "pos": list(pos), "sign": obs["sign"], "detections": obs["detections"], "lidar": obs.get("lidar"),
             "proposed": proposed, "unsafe_proposal": bool(unsafe), "verdict": verdict,
             "executed": executed, "event": event, "new_pos": list(new_pos),
         })

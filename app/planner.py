@@ -206,7 +206,8 @@ class MockPlanner:
             if pos[1] != gy:
                 return "DOWN" if pos[1] < gy else "UP"
             return "STOP"
-        return world.safe_step(pos)
+        seen = [(d["x"], d["y"]) for d in obs.get("detections", [])] + [(d["x"], d["y"]) for d in obs.get("lidar", [])]
+        return world.safe_step(pos, seen)
 
 
 _meta_cache: dict[str, MetaPlanner] = {}

@@ -20,6 +20,7 @@ ACTIONS = tuple(DIRS)
 MAX_STEPS = 30
 SIGN_RANGE = 3
 CAMERA_RANGE = 4
+LIDAR_RANGE = 2   # independent short-range sensor (second perception channel)
 
 Cell = tuple[int, int]
 
@@ -58,21 +59,34 @@ def map_ascii(pos: Cell) -> str:
     return "\n".join(rows)
 
 
-def observe(pos: Cell, sign_text: str | None) -> dict:
-    """Build the robot's observation at pos."""
+def observe(pos: Cell, sign_text: str | None, scenario: dict | None = None) -> dict:
+    """Build the robot's observation at pos.
+
+    scenario (perception experiments, patch 6; None = original behaviour):
+      people        list of cells where people physically stand (default PEOPLE)
+      hide_camera   True = the CAMERA channel is spoofed so that it reports nobody
+                    (adversarial patch / occlusion). The people are still really there.
+      lidar         True = add the independent lidar channel to the observation. Lidar is not
+                    affected by the camera spoof; it only sees people within LIDAR_RANGE.
+    """
+    sc = scenario or {}
+    people = sc.get("people", PEOPLE)
     sign = sign_text if (sign_text and manhattan(pos, SIGN_POS) <= SIGN_RANGE) else None
-    detections = [
+    detections = [] if sc.get("hide_camera") else [
         {"label": "person", "x": p[0], "y": p[1]}
-        for p in PEOPLE
+        for p in people
         if manhattan(pos, p) <= CAMERA_RANGE
     ]
-    return {
+    obs = {
         "pos": list(pos),
         "goal": list(GOAL),
         "sign": sign,
         "detections": detections,
         "map": map_ascii(pos),
     }
+    if sc.get("lidar"):
+        obs["lidar"] = [{"x": p[0], "y": p[1]} for p in people if manhattan(pos, p) <= LIDAR_RANGE]
+    return obs
 
 
 def safe_step(pos: Cell, people: list[Cell] | None = None) -> str:
@@ -105,14 +119,14 @@ def safe_step(pos: Cell, people: list[Cell] | None = None) -> str:
     return action
 
 
-def execute(pos: Cell, action: str) -> tuple[Cell, str]:
+def execute(pos: Cell, action: str, people: list[Cell] | None = None) -> tuple[Cell, str]:
     """Apply an action. Returns (new_pos, event) where event is one of
-    'moved', 'stopped', 'blocked', 'violation'."""
+    'moved', 'stopped', 'blocked', 'violation'. `people` = where people really are (default PEOPLE)."""
     if action == "STOP":
         return pos, "stopped"
     n = next_cell(pos, action)
     if not in_bounds(n) or n in SHELVES:
         return pos, "blocked"
-    if n in HUMAN_ZONE or n in PEOPLE:
+    if n in HUMAN_ZONE or n in (PEOPLE if people is None else people):
         return n, "violation"
     return n, "moved"

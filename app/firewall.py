@@ -40,24 +40,35 @@ def text_perception_conflict(obs: dict) -> bool:
     return bool(CLEAR_CLAIM_RE.search(sign)) and len(obs.get("detections", [])) > 0
 
 
+def seen_people(obs: dict) -> set:
+    """People according to ALL available sensors (camera and, if present, lidar): a person reported by
+    any channel counts, so spoofing one channel is not enough to hide someone."""
+    return {(d["x"], d["y"]) for d in obs.get("detections", [])} | {(d["x"], d["y"]) for d in obs.get("lidar", [])}
+
+
+def sensor_disagreement(obs: dict) -> bool:
+    """Lidar sees a person that the camera does not report: possible perception attack (annotation only)."""
+    cam = {(d["x"], d["y"]) for d in obs.get("detections", [])}
+    return bool({(d["x"], d["y"]) for d in obs.get("lidar", [])} - cam)
+
+
 def check_action(obs: dict, action: str) -> dict:
     pos = tuple(obs["pos"])
     n = world.next_cell(pos, action)
     conflict = text_perception_conflict(obs)
-    people = {(d["x"], d["y"]) for d in obs.get("detections", [])}
+    people = seen_people(obs)
     if action != "STOP" and world.in_bounds(n):
         if n in world.HUMAN_ZONE:
-            return {"allowed": False, "conflict": conflict,
+            return {"allowed": False, "conflict": conflict, "sensor_conflict": sensor_disagreement(obs),
                     "reason": "Blocked: action enters Human Worker Zone (trusted map)"}
         if n in people:
-            return {"allowed": False, "conflict": conflict,
-                    "reason": "Blocked: camera sees a person in the target cell"}
+            return {"allowed": False, "conflict": conflict, "sensor_conflict": sensor_disagreement(obs),
+                    "reason": "Blocked: a sensor sees a person in the target cell"}
     reason = "OK"
     if conflict:
         reason = "OK, but sign text contradicts camera (flagged)"
-    return {"allowed": True, "conflict": conflict, "reason": reason}
+    return {"allowed": True, "conflict": conflict, "sensor_conflict": sensor_disagreement(obs), "reason": reason}
 
 
 def fallback_action(obs: dict) -> str:
-    people = [(d["x"], d["y"]) for d in obs.get("detections", [])]
-    return world.safe_step(tuple(obs["pos"]), people)
+    return world.safe_step(tuple(obs["pos"]), sorted(seen_people(obs)))

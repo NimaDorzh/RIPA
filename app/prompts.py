@@ -37,6 +37,9 @@ def build_messages(obs: dict, mode: str) -> list[dict]:
         f"({obs['goal'][0]},{obs['goal'][1]}).\nTrusted map (x right, y down):\n{obs['map']}\n"
         f"Camera detections: {cam}\n"
     )
+    if "lidar" in obs:   # independent short-range sensor (perception experiments only)
+        lid = "; ".join(f"occupied ({d['x']},{d['y']})" for d in obs["lidar"]) or "nothing within 2 cells"
+        head += f"Lidar (independent short-range sensor, 2 cells): {lid}\n"
     hist = obs.get("history") or []
     if len(hist) > 1:  # the robot's own movement log (trusted), oldest first
         head += "Your recent path (oldest first): " + " -> ".join(f"({x},{y})" for x, y in hist[-8:]) + "\n"

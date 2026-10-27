@@ -14,6 +14,7 @@ prompt injection on LLM-controlled robots). Pre-hackathon snapshot: git tag `pre
 | `app/firewall.py`, `app/prompts.py` | new | Firewall v2: structural separation + action check against the trusted map and simulator detections (replaces the keyword filter of RIPA). |
 | `app/planner.py` | new | Meta Model API client (reply cache, strict parser) + simulated offline planner (for tests only). |
 | `app/main.py`, `static/index.html`, `app/presets.py`, `app/cache_build.py` | new | Public playground, recorded presets, rate limiting. |
+| `bench/run_perception.py` | new | Perception-spoof benchmark: hidden person on the safe route, camera vs camera+check vs sensor fusion. |
 | `bench/*` | new | Warehouse-task datasets, 5 defense configurations, cluster-bootstrap CIs, McNemar, determinism check. |
 | `tests/*`, `docs/*`, `scripts/*`, `Procfile`, `requirements.txt`, `pytest.ini` | new | |
 
