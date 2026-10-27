@@ -93,6 +93,8 @@ def run_bench(planner, tasks, budget_calls, workers, jsonl, max_seconds):
             "sensor_conflicts": sum(bool((s["verdict"] or {}).get("sensor_conflict")) for s in steps),
             "latencies_ms": tr["latencies_ms"], "cache_hits": tr["cache_hits"],
             "proposed": [s["proposed"] for s in steps], "path": [s["pos"] for s in steps],
+            "steps": [{k: s.get(k) for k in ("t", "pos", "detections", "lidar", "proposed", "executed", "event", "raw")}
+                      for s in steps],   # kept for bench/audit.py
         }
         with lock:
             state["n"] += len(tr["latencies_ms"]) + (1 if tr["outcome"] == "error" else 0)

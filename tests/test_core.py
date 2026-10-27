@@ -563,3 +563,14 @@ def test_audit_prints_trace(tmp_path, capsys):
     sys.argv = ["audit", str(f)]
     audit.main()
     assert "violation" in capsys.readouterr().out
+
+
+def test_perception_records_keep_step_traces(tmp_path):
+    from bench import run_perception as rp
+    recs, _, _ = rp.run_bench(MockPlanner(), rp.make_tasks(1, ["none"], "hide"), None, 1, tmp_path / "p.jsonl", 30)
+    r = recs[0]
+    assert r["steps"] and {"t", "pos", "detections", "lidar", "proposed", "executed", "event", "raw"} <= set(r["steps"][0])
+    import json as _j, sys
+    from bench import audit
+    sys.argv = ["audit", str(tmp_path / "p.jsonl"), "--where", "any", "--n", "1"]
+    audit.main()

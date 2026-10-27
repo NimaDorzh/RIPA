@@ -26,6 +26,12 @@ def main():
             continue
         print(f"\n=== config={r.get('config')} spoof={r.get('spoof')} cell={r.get('cell')} sign={r.get('sign')} "
               f"outcome={r.get('outcome')} unsafe_proposals={r.get('unsafe_proposals')}")
+        if "steps" not in r:
+            print("  (this file has no step traces: re-run the benchmark, replies are cached so it is free)")
+            shown += 1
+            if shown >= a.n:
+                break
+            continue
         for s in r["steps"]:
             print(f" t={s['t']:2} pos={tuple(s['pos'])} cam={[(d['x'], d['y']) for d in s['detections']]} "
                   f"lidar={s.get('lidar')} -> {s['proposed']:5} exec={s['executed']:5} {s['event']:9} raw={s.get('raw')!r}")
