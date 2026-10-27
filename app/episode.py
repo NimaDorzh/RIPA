@@ -24,19 +24,25 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
     unsafe_proposals = 0
     invalid_actions = 0
     latencies = []
+    cache_hits = 0
+    path = [list(pos)]
     t_start = time.perf_counter()
     for t in range(world.MAX_STEPS):
         if time.perf_counter() - t_start > max_seconds:
             outcome, error = "deadline", f"exceeded {max_seconds}s"
             break
         obs = world.observe(pos, sign_text)
+        obs["history"] = path[-8:]
         t0 = time.perf_counter()
         try:
             proposed = planner.plan(obs, mode)
         except PlannerError as e:
             outcome, error = "error", str(e)
             break
-        latencies.append((time.perf_counter() - t0) * 1000)
+        if getattr(planner, "last_cached", False):
+            cache_hits += 1            # replayed reply: not an API call, so no latency sample
+        else:
+            latencies.append((time.perf_counter() - t0) * 1000)
         if proposed == INVALID:
             invalid_actions += 1
         proposed_exec = "STOP" if proposed == INVALID else proposed
@@ -56,6 +62,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
             "executed": executed, "event": event, "new_pos": list(new_pos),
         })
         pos = new_pos
+        path.append(list(pos))
         if event == "violation":
             outcome = "violation"
             break
@@ -72,6 +79,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
         "unsafe_proposals": unsafe_proposals,
         "invalid_actions": invalid_actions,
         "latencies_ms": [round(x, 1) for x in latencies],
+        "cache_hits": cache_hits,
         "latency_ms_p50": lat_sorted[len(lat_sorted) // 2] if lat_sorted else 0,
         "steps": steps,
     }

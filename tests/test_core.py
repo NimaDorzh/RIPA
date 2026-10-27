@@ -359,3 +359,51 @@ class AlwaysNull:
 def test_bench_aborts_early_when_replies_are_empty(tmp_path):
     recs, calls, reason = run_bench(AlwaysNull(), make_tasks(20, 4), None, 1, tmp_path / "e.jsonl", 30)
     assert reason and "ABORTED" in reason and len(recs) < (20 + 4) * len(DEFENSES)
+
+
+# ---------- patch 4: single flight, replay latency, history, interleave ----------
+def test_single_flight_one_api_call_for_concurrent_identical_prompts(tmp_path):
+    import threading, time
+    n = {"n": 0}
+
+    def h(req):
+        n["n"] += 1
+        time.sleep(0.05)
+        return httpx.Response(200, json={"choices": [{"message": {"content": '{"action": "UP"}'}}]})
+
+    pl = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(h)))
+    obs = world.observe((3, 2), None)
+    res = []
+    ts = [threading.Thread(target=lambda: res.append(pl.plan(obs, "none"))) for _ in range(6)]
+    [t.start() for t in ts]; [t.join() for t in ts]
+    assert res == ["UP"] * 6 and n["n"] == 1 and pl.usage["cache_hits"] == 5
+
+
+def test_memoize_off_always_calls_api():
+    n = {"n": 0}
+    pl = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(_ok_handler(n))), memoize=False)
+    obs = world.observe((3, 2), None)
+    pl.plan(obs, "none"); pl.plan(obs, "none")
+    assert n["n"] == 2
+
+
+def test_replayed_replies_have_no_latency_sample():
+    n = {"n": 0}
+    pl = MetaPlanner(model="m", client=httpx.Client(transport=httpx.MockTransport(_ok_handler(n))))
+    tr = run_episode("x", "none", pl)          # always UP -> robot oscillates at the wall, same prompt repeats
+    assert tr["cache_hits"] > 0 and len(tr["latencies_ms"]) + tr["cache_hits"] == len(tr["steps"])
+    assert n["n"] == len(tr["latencies_ms"])
+
+
+def test_history_is_in_prompt_and_trace_path_is_recorded():
+    obs = world.observe((1, 2), None)
+    assert "recent path" not in build_messages(obs, "none")[1]["content"]
+    obs["history"] = [[0, 2], [1, 2]]
+    assert "(0,2) -> (1,2)" in build_messages(obs, "none")[1]["content"]
+    assert "back and forth" in build_messages(obs, "none")[0]["content"]
+
+
+def test_make_tasks_interleaves_attack_and_benign():
+    t = make_tasks(20, 8)
+    assert len(t) == 28 and {x["kind"] for x in t[:6]} == {"attack", "benign"}
+    assert sum(x["kind"] == "benign" for x in t[:14]) in (3, 4)

@@ -42,7 +42,10 @@ prompt-level separation lowers it. Stalls (freeze attacks), invalid replies and 
 - Models: `muse-spark-1.3` and `muse-spark-1.2`, both with `reasoning_effort=minimal`, temperature 0, seed 1.
   These are reasoning models: even on `minimal` they spend roughly 550-1050 reasoning tokens (3-7 s) per robot step,
   so a full run is ~3-5k calls per model. Replies are memoized by exact prompt (identical prompts occur in several
-  defenses), which keeps paired comparisons exact; API-level determinism of `seed` is NOT verified.
+  defenses), which keeps paired comparisons exact; whether the API is deterministic at temperature 0 / seed 1 is measured by `python -m bench.determinism`
+  (results will be reported here; until then it is NOT assumed). The prompt includes the robot's own recent path
+  (trusted log) because a memoryless planner otherwise oscillates between two cells; stalls on benign signs are the
+  no-attack baseline for the stall rate.
 - A live episode takes about a minute and costs ~12k tokens per mode, so live free-text runs are off by default
   (`ALLOW_LIVE=0`); the public demo plays recorded real-model traces (the UI labels the planner of every run).
 

@@ -75,7 +75,7 @@ class MetaPlanner:
     name = "meta"
 
     def __init__(self, model: str | None = None, client: httpx.Client | None = None,
-                 cache_path: str | os.PathLike | None = None):
+                 cache_path: str | os.PathLike | None = None, memoize: bool = True):
         if not meta_configured() and client is None:
             raise MetaNotConfigured("Set META_API_BASE, META_API_KEY, META_MODEL (see docs/api-notes.md)")
         self.base = os.environ.get("META_API_BASE", "http://test").rstrip("/")
@@ -95,6 +95,9 @@ class MetaPlanner:
         # Memo of raw replies by exact request (model, effort, seed, messages). Identical prompts occur in
         # several defenses (e.g. none/check) and in re-runs; reusing the reply keeps paired comparisons exact,
         # and the optional JSONL file makes an interrupted or repeated run free. Null replies are never cached.
+        self.memoize = memoize
+        self._tl = threading.local()                       # per-thread "last reply came from the cache"
+        self._key_locks: dict[str, threading.Lock] = {}    # single-flight: one API call per distinct prompt
         self._memo: dict[str, str] = {}
         self._cache_path = Path(cache_path) if cache_path else None
         if self._cache_path and self._cache_path.exists():
@@ -130,15 +133,30 @@ class MetaPlanner:
         blob = json.dumps({"m": self.model, "e": self.effort, "s": self.seed, "msgs": messages}, sort_keys=True)
         return hashlib.sha256(blob.encode()).hexdigest()
 
+    @property
+    def last_cached(self) -> bool:
+        """True if the most recent plan() call on THIS thread was served from the memo (no API call)."""
+        return getattr(self._tl, "cached", False)
+
     def plan(self, obs: dict, mode: str) -> str:
         messages = build_messages(obs, mode)
+        if not self.memoize:
+            return self._query(messages, None)
         key = self._key(messages)
         with self._lock:
-            hit = self._memo.get(key)
+            kl = self._key_locks.setdefault(key, threading.Lock())
+        with kl:  # concurrent workers asking the same prompt wait for the first reply instead of racing
+            with self._lock:
+                hit = self._memo.get(key)
+                if hit is not None:
+                    self.usage["cache_hits"] += 1
             if hit is not None:
-                self.usage["cache_hits"] += 1
-        if hit is not None:
-            return _parse_action(hit)
+                self._tl.cached = True
+                return _parse_action(hit)
+            return self._query(messages, key)
+
+    def _query(self, messages: list[dict], key: str | None) -> str:
+        self._tl.cached = False
         body = {
             "model": self.model, "messages": messages,
             "temperature": 0, "seed": self.seed,
@@ -157,7 +175,7 @@ class MetaPlanner:
             self.usage["reasoning_tokens"] += (u.get("completion_tokens_details") or {}).get("reasoning_tokens", 0) or 0
             if content is None:
                 self.usage["null_content"] += 1
-            else:
+            elif key is not None and key not in self._memo:   # first writer wins
                 self._memo[key] = content
                 if self._cache_path:
                     self._cache_path.parent.mkdir(parents=True, exist_ok=True)

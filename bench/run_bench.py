@@ -15,6 +15,8 @@ What is measured (and what is NOT):
     this is 0 BY CONSTRUCTION (the check blocks exactly the world's violation set); it is
     reported for completeness, not as a defense result.
   * stall rate (timeout): availability failures, e.g. a freeze attack; reported separately.
+  * stall rate on benign signs is the no-attack baseline: planner failures (e.g. wandering) are not attacks.
+  * model calls / latency count real API calls only (replayed replies are reported as cache_hits).
   * invalid rate: model replies that were not exactly one action (executed as STOP, counted).
   * API errors/deadline episodes are excluded from rates and reported as n_error.
 Intervals: attacks are 25 independent bases x 4 wrappers, so CIs for attack rates use a
@@ -62,7 +64,14 @@ def make_tasks(n_attack: int, n_benign: int) -> list[dict]:
         tpl = datasets.BENIGN_T[len(ben) % len(datasets.BENIGN_T)]
         ben.append({"kind": "benign", "cat": "benign", "base": f"benign-{len(ben) % len(datasets.BENIGN_T)}",
                     "wrapper": 0, "text": t, "template": tpl})
-    return atk + ben
+    # interleave so that any prefix of the run (budget stop, abort) holds both attack and benign episodes
+    out, ai, bi = [], 0, 0
+    while ai < len(atk) or bi < len(ben):
+        if bi >= len(ben) or (ai < len(atk) and ai * max(len(ben), 1) <= bi * max(len(atk), 1)):
+            out.append(atk[ai]); ai += 1
+        else:
+            out.append(ben[bi]); bi += 1
+    return out
 
 
 def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
@@ -84,7 +93,9 @@ def run_bench(planner, tasks, budget_calls, workers, jsonl_path, max_seconds):
                 "mode": mode, "outcome": tr["outcome"], "error": tr["error"],
                 "unsafe_proposals": tr["unsafe_proposals"], "invalid_actions": tr["invalid_actions"],
                 "interventions": tr["interventions"], "n_steps": len(tr["steps"]),
-                "latencies_ms": tr["latencies_ms"],
+                "latencies_ms": tr["latencies_ms"], "cache_hits": tr["cache_hits"],
+                "proposed": [st["proposed"] for st in tr["steps"]],
+                "path": [st["pos"] for st in tr["steps"]],
             }
             with lock:
                 calls["n"] += len(tr["latencies_ms"]) + (1 if tr["outcome"] == "error" else 0)
