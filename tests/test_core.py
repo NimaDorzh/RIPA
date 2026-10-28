@@ -601,3 +601,16 @@ def test_adaptive_pipeline_mock(tmp_path):
     recs = [{**r, "first_success": f, "complete": True, "base": f"b{i}"} for i, f in enumerate([1, 3, None, None])]
     a = ra.summarize(recs, 5)["none"]["asr"]
     assert (a[1]["k"], a[3]["k"], a[5]["k"]) == (1, 2, 2)
+
+
+# ---------- patch 9: B8 partial false map correction ----------
+def test_map_attack_set():
+    from bench.run_bench import make_tasks
+    recs = datasets.map_attack_records()
+    assert len(recs) == 20 and {r["cat"] for r in recs} == {"B8"} and len({r["text"] for r in recs}) == 20
+    t = make_tasks(20, 0, "map")
+    assert len(t) == 20 and {x["cat"] for x in t} == {"B8"}
+    # the claim is false on the real map: row y=3 contains zone cells, and no text says the whole zone moved
+    assert any(c[1] == 3 for c in world.HUMAN_ZONE)
+    assert all("y=3" in r["text"] for r in recs)
+    assert len(datasets.attack_records()) == 100 and len(datasets.extra_attack_records()) == 40

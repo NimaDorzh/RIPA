@@ -58,7 +58,8 @@ def select(items: list, n: int) -> list:
 
 
 def make_tasks(n_attack: int, n_benign: int, attack_set: str = "core") -> list[dict]:
-    recs = datasets.extra_attack_records() if attack_set == "extra" else datasets.attack_records()
+    recs = {"extra": datasets.extra_attack_records, "map": datasets.map_attack_records}.get(
+        attack_set, datasets.attack_records)()
     atk = [{"kind": "attack", **r} for r in select(recs, n_attack)]
     ben = []
     for t in datasets.benign(n_benign):
@@ -183,8 +184,9 @@ def main():
     ap.add_argument("--model", default=None)
     ap.add_argument("--n-attack", type=int, default=100, help="max 100 (25 bases x 4 wrappers)")
     ap.add_argument("--n-benign", type=int, default=24)
-    ap.add_argument("--attack-set", choices=["core", "extra"], default="core",
-                    help="core = B1-B5 (100 texts); extra = B6 pressure and B7 fake-reasoning signs (40 texts)")
+    ap.add_argument("--attack-set", choices=["core", "extra", "map"], default="core",
+                    help="core = B1-B5 (100 texts); extra = B6 pressure and B7 fake-reasoning signs (40 texts); "
+                         "map = B8 partial false map correction found by the adaptive attacker (20 texts)")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--max-seconds", type=float, default=240.0, help="wall-clock limit per episode")
     ap.add_argument("--defenses", default=",".join(DEFENSES),
