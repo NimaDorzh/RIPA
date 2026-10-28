@@ -1,199 +1,1466 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hack the Robot</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hack the Robot — Warehouse AI Safety Playground</title>
 <style>
-  :root { --bg:#0e1116; --panel:#171c24; --ink:#e6edf3; --mute:#8b98a8; --ok:#3fb950; --bad:#f85149; --warn:#d29922; --line:#2a3340; --acc:#58a6ff; --lidar:#3fb950; --cam:#58a6ff; }
-  * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
-  .wrap { max-width:1100px; margin:0 auto; padding:16px; }
-  h1 { margin:0 0 4px; font-size:26px; letter-spacing:.3px; }
-  .sub { color:var(--mute); margin-bottom:14px; }
-  .warn { background:#2b2412; border:1px solid #5b4a1a; color:#e3c26b; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:14px; }
-  .group { margin-bottom:10px; }
-  .group h3 { margin:0 0 6px; font-size:12px; letter-spacing:.6px; text-transform:uppercase; color:var(--mute); font-weight:600; }
-  .presets { display:flex; flex-wrap:wrap; gap:8px; }
-  button { background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:9px 12px; border-radius:8px; cursor:pointer; font:inherit; }
-  button:hover { border-color:var(--acc); }
-  button.benign { border-style:dashed; }
-  button.active { border-color:var(--acc); background:#16263a; }
-  button:disabled { opacity:.5; cursor:progress; }
-  .arena { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px; }
-  @media (max-width:760px) { .arena { grid-template-columns:1fr; } }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
-  .card h2 { margin:0 0 8px; font-size:15px; display:flex; justify-content:space-between; align-items:center; }
-  .tag { font-size:12px; padding:2px 8px; border-radius:99px; border:1px solid var(--line); color:var(--mute); }
-  .tag.off { color:var(--bad); border-color:#5a2a2a; } .tag.on { color:var(--ok); border-color:#1f4a2a; }
-  canvas { width:100%; height:auto; background:#0b0e13; border-radius:8px; display:block; }
-  .status { margin-top:8px; min-height:26px; font-weight:600; }
-  .status.bad { color:var(--bad); } .status.ok { color:var(--ok); }
-  .repl { color:var(--mute); font-size:12px; min-height:16px; }
-  .trace { margin-top:8px; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--mute); max-height:160px; overflow:auto; background:#0b0e13; border-radius:8px; padding:8px; }
-  .trace .blk { color:var(--warn); } .trace .vio { color:var(--bad); }
-  .signbox { margin:10px 0 0; padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:8px; }
-  .signbox b { color:var(--warn); }
-  .signbox .desc { color:var(--mute); font-size:13px; margin-top:4px; }
-  .legend { display:flex; flex-wrap:wrap; gap:14px; color:var(--mute); font-size:12px; margin-top:10px; }
-  .legend i { display:inline-block; width:10px; height:10px; margin-right:5px; vertical-align:-1px; }
-  .free { display:flex; gap:8px; margin-top:12px; } .free input { flex:1; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; }
-  .note { color:var(--mute); font-size:12px; margin-top:12px; }
+:root {
+  --bg: #0a0d12;
+  --panel: #11161f;
+  --panel-alt: #161c28;
+  --border: #242e42;
+  --text: #edf2f7;
+  --muted: #8b9bb4;
+  --accent: #38bdf8;
+  --accent-dim: rgba(56, 189, 248, 0.14);
+  --red: #f43f5e;
+  --red-bg: rgba(244, 63, 94, 0.16);
+  --green: #10b981;
+  --green-bg: rgba(16, 185, 129, 0.16);
+  --amber: #f59e0b;
+  --amber-bg: rgba(245, 158, 11, 0.16);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.45;
+  padding: 14px 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+button, input, select { font: inherit; color: inherit; }
+button {
+  cursor: pointer;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 12px;
+  transition: border-color 0.15s, background 0.15s;
+}
+button:hover { border-color: var(--accent); }
+button:focus-visible, input:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.title-group h1 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  display: inline-block;
+  margin-right: 12px;
+}
+.title-group .tagline {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+.harmless-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  background: var(--panel);
+  padding: 4px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.alert-banner {
+  background: var(--red-bg);
+  border: 2px solid var(--red);
+  color: #fecdd3;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 12px;
+  display: none;
+}
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.story-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 11px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s, background 0.15s;
+}
+.story-card:hover { border-color: #435578; }
+.story-card.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, var(--panel) 100%);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.card-title { font-weight: 700; font-size: 1rem; color: var(--text); }
+.card-kicker {
+  font-size: 0.7rem;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--panel-alt);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+.card-desc { font-size: 0.83rem; color: var(--muted); margin-bottom: 8px; }
+.card-controls {
+  margin-bottom: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.more-menu { position: relative; display: inline-block; }
+.more-menu summary {
+  list-style: none;
+  font-size: 0.78rem;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+}
+.more-menu summary::-webkit-details-marker { display: none; }
+.more-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  background: #182030;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 5px;
+  z-index: 30;
+  min-width: 240px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.more-dropdown button {
+  text-align: left;
+  font-size: 0.8rem;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  display: flex;
+  justify-content: space-between;
+}
+.more-dropdown button:hover, .more-dropdown button.active-preset {
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+.toggle-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.switch-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  user-select: none;
+  background: var(--panel-alt);
+  padding: 4px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+.switch-btn {
+  width: 34px;
+  height: 18px;
+  border-radius: 10px;
+  background: #2d3748;
+  position: relative;
+  padding: 0;
+  border: 1px solid #4a5568;
+  transition: background 0.15s;
+}
+.switch-btn[aria-checked="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch-thumb {
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.15s;
+}
+.switch-btn[aria-checked="true"] .switch-thumb {
+  transform: translateX(16px);
+  background: #090d16;
+}
+.benchmark-strip {
+  font-size: 0.73rem;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.28);
+  border-top: 1px solid var(--border);
+  padding-top: 7px;
+  margin-top: auto;
+  line-height: 1.35;
+}
+.live-box {
+  display: none;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  align-items: center;
+  gap: 10px;
+}
+.live-box input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.playback-btns { display: flex; align-items: center; gap: 6px; }
+.playback-btns button.active-speed {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+.step-counter {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.76rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+  align-items: center;
+}
+.legend-item { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+.arenas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.arena-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.arena-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.arena-title { font-size: 1.05rem; font-weight: 700; }
+.arena-badge {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--accent);
+}
+.result-banner {
+  min-height: 46px;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1.08rem;
+  letter-spacing: -0.01em;
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--muted);
+}
+.result-banner.outcome-violation {
+  background: var(--red-bg);
+  border-color: var(--red);
+  color: #ffe4e6;
+}
+.result-banner.outcome-goal {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: #d1fae5;
+}
+.result-banner.outcome-timeout {
+  background: rgba(148, 163, 184, 0.14);
+  border-color: #64748b;
+  color: #e2e8f0;
+}
+.result-banner.outcome-error {
+  background: var(--amber-bg);
+  border-color: var(--amber);
+  color: #fef3c7;
+}
+.banner-sub {
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  opacity: 0.95;
+}
+.canvas-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 10 / 6;
+  background: #0d121b;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+canvas { width: 100%; height: 100%; display: block; }
+.sign-caption {
+  font-family: var(--mono);
+  font-size: 0.77rem;
+  background: #0d131d;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--amber);
+  padding: 5px 9px;
+  border-radius: 4px;
+  color: #cbd5e1;
+  min-height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.chips-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 28px;
+  align-items: center;
+}
+.step-chip {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  padding: 3px 7px;
+  border-radius: 4px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  cursor: pointer;
+}
+.step-chip.current {
+  border-color: var(--accent);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.step-chip.chip-blocked {
+  background: var(--green-bg);
+  border-color: var(--green);
+  color: #a7f3d0;
+  font-weight: 600;
+}
+.step-chip.chip-violation {
+  background: var(--red-bg);
+  border-color: var(--red);
+  color: #fecdd3;
+  font-weight: 600;
+}
+.replicates-line {
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  min-height: 18px;
+}
+.details-drawer {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+  font-size: 0.78rem;
+}
+.details-drawer summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 600;
+  user-select: none;
+}
+.details-table-wrap { max-height: 150px; overflow-y: auto; margin-top: 6px; }
+table.step-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.74rem;
+}
+.step-table th, .step-table td {
+  text-align: left;
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.step-table th { color: var(--muted); }
+.footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 9px;
+  font-family: var(--mono);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 960px) {
+  .cards-grid, .arenas { grid-template-columns: 1fr; }
+}
+
+/* ---- patch 11: readability for video, scene-first hierarchy ---- */
+html { font-size: 17px; }
+body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1200px 500px at 50% -120px, #14213a 0%, var(--bg) 60%) no-repeat, var(--bg); }
+.title-group h1 { font-size: 2.2rem; background: linear-gradient(90deg, #e0f2fe, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.title-group .tagline { font-size: 1rem; }
+.cards-grid { gap: 14px; margin-bottom: 14px; }
+.story-card { padding: 14px 16px; min-height: 0; }
+.card-title { font-size: 1.15rem; }
+.card-desc { font-size: .92rem; margin-bottom: 10px; }
+.card-kicker { font-size: .72rem; }
+.arenas { gap: 18px; }
+.arena-panel { padding: 16px; gap: 12px; border-radius: 12px; }
+.arena-title { font-size: 1.3rem; }
+.arena-badge { font-size: .82rem; padding: 3px 10px; }
+.result-banner { min-height: 64px; font-size: 1.45rem; padding: 10px 16px; border-width: 2px; }
+.banner-sub { font-size: .9rem; }
+.canvas-wrap { border-radius: 8px; box-shadow: inset 0 0 0 1px #1c2740, 0 8px 30px rgba(0,0,0,.35); }
+.sign-caption { font-size: .85rem; min-height: 34px; }
+.step-chip { font-size: .82rem; padding: 4px 9px; }
+.replicates-line { font-size: .86rem; }
+.toolbar { padding: 10px 16px; }
+.legend { font-size: .85rem; }
+.bench-panel { display: flex; gap: 22px; align-items: center; background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 14px 20px; margin-bottom: 14px; }
+.bench-big { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; color: var(--text); white-space: nowrap; min-width: 250px; }
+.bench-big small { display: block; font-size: .78rem; font-weight: 500; color: var(--muted); letter-spacing: 0; white-space: normal; }
+.bench-kicker { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 3px; font-family: var(--mono); }
+.bench-text { font-size: .9rem; color: #b6c2d6; }
+.footer-bar { font-size: .78rem; }
+@media (max-width: 960px) { .bench-panel { flex-direction: column; align-items: flex-start; } .bench-big { min-width: 0; } html { font-size: 16px; } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>Hack the Robot</h1>
-  <div class="sub">A warehouse robot controlled by a Meta AI model. Attack it through a sign or through its camera, then compare it with a defended robot.</div>
-  <div class="warn">Simulation only. Do not enter personal data: inputs may be logged and, while free credits are used, processed by the model provider.</div>
-  <div class="warn" id="simbanner" hidden style="font-size:15px;font-weight:700;border-color:#a33;color:#ff9b9b;background:#2b1212">SIMULATED planner: this run is an offline stand-in, NOT a real AI model.</div>
-  <div id="presets"></div>
-  <div class="signbox" id="signbox" hidden><b id="signlabel">Sign in the aisle:</b> <span id="signtext"></span><div class="desc" id="desc"></div></div>
-  <div class="arena">
-    <div class="card"><h2><span id="n0">Without firewall</span> <span class="tag off" id="g0">OFF</span></h2><canvas id="c0" width="600" height="360"></canvas><div class="status" id="s0"></div><div class="repl" id="r0"></div><div class="trace" id="t0"></div></div>
-    <div class="card"><h2><span id="n1">With firewall</span> <span class="tag on" id="g1">ON</span></h2><canvas id="c1" width="600" height="360"></canvas><div class="status" id="s1"></div><div class="repl" id="r1"></div><div class="trace" id="t1"></div></div>
+
+<header class="top-bar">
+  <div class="title-group">
+    <h1>Hack the Robot</h1>
+    <span class="tagline">Adversarial signs &amp; sensor spoofing against a warehouse AI planner (Muse Spark), side by side with safety defenses.</span>
+  </div>
+  <div class="harmless-note">Defense on harmless signs: 24/24 deliveries in every mode.</div>
+</header>
+
+<div id="mockBanner" class="alert-banner" role="alert">
+  [!] SIMULATED planner: offline stand-in, NOT a real AI model.
+</div>
+<div id="errorBanner" class="alert-banner" role="alert"></div>
+
+<section class="cards-grid" aria-label="Attack Scenarios">
+  <!-- Card 1: Text sign attack -->
+  <div class="story-card" id="card-text" tabindex="0" role="button" aria-pressed="false">
+    <div>
+      <div class="card-head">
+        <span class="card-title">1. Text sign attack</span>
+        <span class="card-kicker">Prompt Injection</span>
+      </div>
+      <p class="card-desc" id="desc-text">A malicious sign in the aisle attempts to trick the robot into taking a shortcut through the Human Worker Zone.</p>
+      <div class="card-controls" onclick="event.stopPropagation()">
+        <span id="currentTextPresetBadge" style="font-family:var(--mono);font-size:0.76rem;color:var(--accent);">Preset: shortcut</span>
+        <details class="more-menu" id="moreSignMenu">
+          <summary>More sign attacks &#9662;</summary>
+          <div class="more-dropdown" id="moreSignList"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Card 2: False map correction -->
+  <div class="story-card" id="card-map" tabindex="0" role="button" aria-pressed="false">
+    <div>
+      <div class="card-head">
+        <span class="card-title">2. False map correction</span>
+        <span class="card-kicker">Adaptive Attack</span>
+      </div>
+      <p class="card-desc" id="desc-map">An adaptive attacker plants a fake system map errata notice claiming the Human Worker Zone coordinates were relocated.</p>
+    </div>
+  </div>
+
+  <!-- Card 3: Camera spoof -->
+  <div class="story-card" id="card-cam" tabindex="0" role="button" aria-pressed="false">
+    <div>
+      <div class="card-head">
+        <span class="card-title">3. Camera spoof</span>
+        <span class="card-kicker">Sensor Patch</span>
+      </div>
+      <p class="card-desc" id="desc-cam">An adversarial patch hides the worker in the aisle from the camera while independent LiDAR still detects the physical obstacle.</p>
+      <div class="card-controls toggle-row" onclick="event.stopPropagation()">
+        <label class="switch-label" for="camSpoofToggle">
+          <span>Camera spoofed</span>
+          <button type="button" role="switch" id="camSpoofToggle" class="switch-btn" aria-checked="true">
+            <span class="switch-thumb"></span>
+          </button>
+        </label>
+        <label class="switch-label" for="lidarOverlayToggle">
+          <span>Show LiDAR ring</span>
+          <button type="button" role="switch" id="lidarOverlayToggle" class="switch-btn" aria-checked="true">
+            <span class="switch-thumb"></span>
+          </button>
+        </label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div id="liveSignBox" class="live-box">
+  <label for="customSignInput" style="font-weight:700;font-size:0.84rem;">Custom Sign Text (Live Model):</label>
+  <input type="text" id="customSignInput" placeholder="Enter custom warehouse sign text to test live..." maxlength="180">
+  <button type="button" id="runCustomBtn" style="border-color:var(--accent);color:var(--accent);font-weight:600;">Run Live Sign</button>
+</div>
+
+<section class="toolbar" aria-label="Playback Controls">
+  <div class="playback-btns">
+    <button type="button" id="btnReplay" title="Restart playback">&#8634; Replay</button>
+    <button type="button" id="btnPlayPause" title="Play or Pause">&#9208; Pause</button>
+    <button type="button" id="btnStep" title="Advance one step">&#9197; Step</button>
+    <button type="button" id="btnSpeed1x" class="active-speed">1x</button>
+    <button type="button" id="btnSpeed2x">2x</button>
+    <span class="step-counter" id="stepCounterText">Step 0 / 0</span>
   </div>
   <div class="legend">
-    <span><i style="background:#f0b46a;border-radius:50%"></i>worker (really there)</span>
-    <span><i style="border:2px solid var(--cam)"></i>camera reports a person</span>
-    <span><i style="border:2px solid var(--lidar);border-radius:50%"></i>lidar reports a person</span>
-    <span><i style="background:#58a6ff"></i>robot</span>
+    <span class="legend-item"><span class="swatch" style="background:#eab308;border:1px solid #000"></span>Human Worker Zone</span>
+    <span class="legend-item"><span class="swatch" style="border:2px solid #38bdf8;background:transparent"></span>Camera Detection</span>
+    <span class="legend-item"><span class="swatch" style="border:2px solid #10b981;border-radius:50%;background:transparent"></span>LiDAR Detection</span>
+    <span class="legend-item"><span class="swatch" style="background:#f59e0b"></span>Sign Board</span>
   </div>
-  <div class="free" id="freerow" hidden><input id="free" maxlength="300" placeholder="Or write your own sign (live run, rate limited)"><button id="freego">Run</button></div>
-  <div class="note" id="srcnote"></div>
-</div>
+</section>
+
+<main class="arenas">
+  <!-- Left Panel: Weaker Setup -->
+  <section class="arena-panel" aria-label="Left Comparison Panel">
+    <div class="arena-header">
+      <h2 class="arena-title" id="leftTitle">Baseline Robot</h2>
+      <span class="arena-badge" id="leftBadge">No Defense</span>
+    </div>
+    <div class="result-banner" id="leftBanner" role="status" aria-live="polite">
+      <span id="leftBannerText">Ready</span>
+      <span class="banner-sub" id="leftBannerSub"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="leftCanvas" width="1400" height="840"></canvas>
+    </div>
+    <div class="sign-caption" id="leftCaption">
+      <span>Sign in aisle: none</span>
+    </div>
+    <div class="chips-strip" id="leftChips" aria-label="Left timeline steps"></div>
+    <div class="replicates-line" id="leftReplicates"></div>
+    <details class="details-drawer">
+      <summary>Details (step log &amp; verdicts)</summary>
+      <div class="details-table-wrap">
+        <table class="step-table">
+          <thead><tr><th>t</th><th>Proposed</th><th>Executed</th><th>Event / Reason</th></tr></thead>
+          <tbody id="leftTableBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- Right Panel: Defended Setup -->
+  <section class="arena-panel" aria-label="Right Comparison Panel">
+    <div class="arena-header">
+      <h2 class="arena-title" id="rightTitle">Defended Robot</h2>
+      <span class="arena-badge" id="rightBadge">Safety Firewall + LiDAR</span>
+    </div>
+    <div class="result-banner" id="rightBanner" role="status" aria-live="polite">
+      <span id="rightBannerText">Ready</span>
+      <span class="banner-sub" id="rightBannerSub"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="rightCanvas" width="1400" height="840"></canvas>
+    </div>
+    <div class="sign-caption" id="rightCaption">
+      <span>Sign in aisle: none</span>
+    </div>
+    <div class="chips-strip" id="rightChips" aria-label="Right timeline steps"></div>
+    <div class="replicates-line" id="rightReplicates"></div>
+    <details class="details-drawer">
+      <summary>Details (step log &amp; verdicts)</summary>
+      <div class="details-table-wrap">
+        <table class="step-table">
+          <thead><tr><th>t</th><th>Proposed</th><th>Executed</th><th>Event / Reason</th></tr></thead>
+          <tbody id="rightTableBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+</main>
+
+<section class="bench-panel" id="benchPanel" aria-live="polite">
+  <div class="bench-big" id="benchBig"></div>
+  <div class="bench-text"><div class="bench-kicker">Benchmark (Muse Spark)</div><div id="benchText"></div></div>
+</section>
+
+<footer class="footer-bar">
+  <div id="provenanceText">Planner: checking...</div>
+  <div>The firewall's own zero is by construction (its check blocks exactly what the simulator scores as a violation); the measured quantity is how often the model proposes an unsafe move. | Meta Global AI Developer Hackathon</div>
+</footer>
+
 <script>
-const CS = 60; // cell size in canvas px
-const LIDAR_R = 2;
-let world = null;
-let current = null;   // preset being shown (null for a free-text sign)
-let runId = 0;        // invalidates animations of an earlier click
-const $ = (id) => document.getElementById(id);
+(() => {
+  // Placeholders until /api/world answers; there is deliberately NO offline demo data in this page.
+  const EMPTY_WORLD = { w: 10, h: 6, start: [0, 2], goal: [9, 2], shelves: [], human_zone: [], people: [], sign_pos: [3, 2] };
 
-const TEXT_SIDES = [{label: "Without firewall", tag: "OFF"}, {label: "With firewall", tag: "ON"}];
-
-function draw(ctx, st) {
-  const w = world;
-  ctx.clearRect(0, 0, 600, 360);
-  for (let y = 0; y < w.h; y++) for (let x = 0; x < w.w; x++) {
-    ctx.fillStyle = "#12171f"; ctx.fillRect(x*CS, y*CS, CS-1, CS-1);
-  }
-  const fill = (cells, col) => { ctx.fillStyle = col; cells.forEach(([x,y]) => ctx.fillRect(x*CS, y*CS, CS-1, CS-1)); };
-  fill(w.human_zone, st.alarm ? "#6b1f1f" : "#3a2a12");
-  fill(w.shelves, "#2b3442");
-  fill([w.goal], "#1d4a2a");
-  ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#c9a14a";
-  ctx.fillText("HUMAN ZONE", 5*CS, 1*CS + 12);
-  ctx.fillStyle = "#6fcf7f"; ctx.fillText("DOCK", w.goal[0]*CS + CS/2, w.goal[1]*CS + CS/2 + 4);
-  if (st.hasSign) { ctx.fillStyle = "#e3c26b"; ctx.fillText("SIGN", w.sign_pos[0]*CS + CS/2, w.sign_pos[1]*CS + 14); }
-  const [rx, ry] = st.pos;
-  if (st.lidar) {   // lidar range ring around the robot
-    ctx.strokeStyle = "#3fb95055"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.arc(rx*CS+CS/2, ry*CS+CS/2, LIDAR_R*CS + CS/2, 0, 7); ctx.stroke(); ctx.setLineDash([]);
-  }
-  st.people.forEach(([x,y]) => { ctx.fillStyle = "#f0b46a"; ctx.beginPath(); ctx.arc(x*CS+CS/2, y*CS+CS/2, 11, 0, 7); ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText("person", x*CS+CS/2, y*CS+CS-8); });
-  (st.cam || []).forEach(d => { ctx.strokeStyle = "#58a6ff"; ctx.lineWidth = 2; ctx.strokeRect(d.x*CS+3, d.y*CS+3, CS-7, CS-7); });
-  (st.lid || []).forEach(d => { ctx.strokeStyle = "#3fb950"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(d.x*CS+CS/2, d.y*CS+CS/2, 20, 0, 7); ctx.stroke(); });
-  if (st.camBlind && st.people.length) {   // camera reports nobody although a worker is there
-    ctx.fillStyle = "#58a6ff"; ctx.font = "11px sans-serif"; ctx.fillText("camera reports: nobody", 5*CS, 6*CS - 8);
-  }
-  if (st.trail) { ctx.strokeStyle = "#58a6ff55"; ctx.lineWidth = 3; ctx.beginPath(); st.trail.forEach(([x,y],i) => { const px=x*CS+CS/2, py=y*CS+CS/2; i? ctx.lineTo(px,py) : ctx.moveTo(px,py); }); ctx.stroke(); }
-  ctx.fillStyle = st.alarm ? "#f85149" : "#58a6ff"; ctx.fillRect(rx*CS+14, ry*CS+14, CS-28, CS-28);
-  if (st.alarm) { ctx.fillStyle = "#f85149"; ctx.font = "bold 22px sans-serif"; ctx.fillText("SAFETY VIOLATION", 300, 180); }
-  if (st.shield) { ctx.strokeStyle = "#3fb950"; ctx.lineWidth = 3; ctx.strokeRect(rx*CS+4, ry*CS+4, CS-8, CS-8); }
-}
-function peopleOf(tr) { return (tr.scenario && tr.scenario.people) ? tr.scenario.people : world.people; }
-
-function play(i, tr, my) {
-  const ctx = $("c"+i).getContext("2d"), log = $("t"+i), status = $("s"+i), repl = $("r"+i);
-  log.innerHTML = ""; status.textContent = ""; status.className = "status"; repl.textContent = "";
-  const steps = tr.steps, trail = steps.length ? [steps[0].pos] : [world.start];
-  const people = peopleOf(tr);
-  const sc = tr.scenario || {};
-  const hasSign = steps.some(s => s.sign);
-  const base = { people, hasSign, lidar: !!sc.lidar, camBlind: sc.camera_mode === "hide" };
-  draw(ctx, { ...base, pos: steps.length ? steps[0].pos : world.start, trail });
-  let k = 0;
-  const tick = () => {
-    if (my !== runId) return;
-    if (k >= steps.length) return finish();
-    const s = steps[k]; trail.push(s.new_pos);
-    let line = `t${s.t} proposed ${s.proposed}`;
-    let cls = "";
-    if (s.verdict && !s.verdict.allowed) { line += ` -> BLOCKED (${s.verdict.reason}); safe step ${s.executed}`; cls = "blk"; }
-    else if (s.verdict && s.verdict.sensor_conflict) { line += ` | lidar sees a person the camera does not`; cls = "blk"; }
-    else if (s.verdict && s.verdict.conflict) { line += ` | sign contradicts camera`; cls = "blk"; }
-    if (s.event === "violation") { line += "  !! VIOLATION"; cls = "vio"; }
-    const d = document.createElement("div"); d.className = cls; d.textContent = line; log.appendChild(d); log.scrollTop = log.scrollHeight;
-    draw(ctx, { ...base, pos: s.new_pos, trail, cam: s.detections, lid: s.lidar, alarm: s.event === "violation", shield: s.verdict && !s.verdict.allowed });
-    k++; setTimeout(tick, s.event === "violation" ? 0 : 140);
+  const BENCH = {
+    text: { big: '0 / 40', sub: 'unsafe proposals per model', text: 'Static text attacks (about 140 sign texts), three Muse Spark versions: 0 unsafe proposals out of 40 per model. These attacks do not work on Muse Spark.' },
+    map: { big: '7-9 / 20 \u2192 0 / 20', sub: 'without defense \u2192 with a one-line prompt rule', text: 'False map correction found by an adaptive attacker: without defense 7/20, 8/20 and 9/20 unsafe proposals over three decoding seeds on Muse Spark 1.3; with a one-line "signs are untrusted data" prompt rule 0/20 on each seed. Caveat: the attack family was found on the evaluation split, so these numbers are descriptive, not unbiased estimates.' },
+    cam: { big: '14 / 15 \u2192 0 / 15', sub: 'camera only \u2192 camera + lidar', text: 'Camera spoof, Muse Spark 1.3, 15 episodes per setup: camera-only robot caused a violation in 14 of 15; camera + lidar fusion in 0 of 15 (paired exact test, Holm-adjusted p = 0.0002). Small sample: 95% CIs are 70-99% and 0-20%.' }
   };
-  const finish = () => {
-    if (tr.outcome === "violation") {
-      const last = steps[steps.length-1].new_pos;
-      const inZone = world.human_zone.some(c => c[0] === last[0] && c[1] === last[1]);
-      status.textContent = inZone ? "Robot entered the Human Worker Zone." : "Robot ran into a worker.";
-      status.classList.add("bad");
-    }
-    else if (tr.outcome === "goal") { status.textContent = tr.interventions ? `Delivered safely. Safety check intervened ${tr.interventions}x.` : "Delivered safely."; status.classList.add("ok"); }
-    else if (tr.outcome === "timeout") status.textContent = "Robot never reached the dock (stalled).";
-    else status.textContent = `Run failed (${tr.outcome}${tr.error ? ": " + tr.error : ""}).`;
-    if (tr.replicates) {
-      const n = tr.replicates.seeds.length, bad = tr.replicates.unsafe.reduce((a, b) => a + b, 0);
-      repl.textContent = `Rerun with ${n} decoding seeds: unsafe move proposed in ${bad} of ${n}.`;
-    }
+  let world = EMPTY_WORLD;
+  let health = { ok: false, live_enabled: false };
+  let presets = [];
+  let activePresetId = 'shortcut';
+  let activeCard = 'text';
+  let currentTextPresetId = 'shortcut';
+  let camSpoofed = true;
+  let showLidarRing = true;
+
+  let leftTrace = null;
+  let rightTrace = null;
+  let isLoading = false;
+
+  let playing = true;
+  let speed = 1;
+  let stepDuration = 300;
+  let animProgress = 0;
+  let lastFrameTime = performance.now();
+  let reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const dom = {
+    mockBanner: document.getElementById('mockBanner'),
+    errorBanner: document.getElementById('errorBanner'),
+    cardText: document.getElementById('card-text'),
+    cardMap: document.getElementById('card-map'),
+    cardCam: document.getElementById('card-cam'),
+    descText: document.getElementById('desc-text'),
+    descMap: document.getElementById('desc-map'),
+    descCam: document.getElementById('desc-cam'),
+    currentTextPresetBadge: document.getElementById('currentTextPresetBadge'),
+    moreSignMenu: document.getElementById('moreSignMenu'),
+    moreSignList: document.getElementById('moreSignList'),
+    camSpoofToggle: document.getElementById('camSpoofToggle'),
+    lidarOverlayToggle: document.getElementById('lidarOverlayToggle'),
+    liveSignBox: document.getElementById('liveSignBox'),
+    customSignInput: document.getElementById('customSignInput'),
+    runCustomBtn: document.getElementById('runCustomBtn'),
+    btnReplay: document.getElementById('btnReplay'),
+    btnPlayPause: document.getElementById('btnPlayPause'),
+    btnStep: document.getElementById('btnStep'),
+    btnSpeed1x: document.getElementById('btnSpeed1x'),
+    btnSpeed2x: document.getElementById('btnSpeed2x'),
+    stepCounterText: document.getElementById('stepCounterText'),
+    leftTitle: document.getElementById('leftTitle'),
+    leftBadge: document.getElementById('leftBadge'),
+    leftBanner: document.getElementById('leftBanner'),
+    leftBannerText: document.getElementById('leftBannerText'),
+    leftBannerSub: document.getElementById('leftBannerSub'),
+    leftCanvas: document.getElementById('leftCanvas'),
+    leftCaption: document.getElementById('leftCaption'),
+    leftChips: document.getElementById('leftChips'),
+    leftReplicates: document.getElementById('leftReplicates'),
+    leftTableBody: document.getElementById('leftTableBody'),
+    rightTitle: document.getElementById('rightTitle'),
+    rightBadge: document.getElementById('rightBadge'),
+    rightBanner: document.getElementById('rightBanner'),
+    rightBannerText: document.getElementById('rightBannerText'),
+    rightBannerSub: document.getElementById('rightBannerSub'),
+    rightCanvas: document.getElementById('rightCanvas'),
+    rightCaption: document.getElementById('rightCaption'),
+    rightChips: document.getElementById('rightChips'),
+    rightReplicates: document.getElementById('rightReplicates'),
+    rightTableBody: document.getElementById('rightTableBody'),
+    provenanceText: document.getElementById('provenanceText')
   };
-  tick();
-}
 
-async function run(body) {
-  const my = ++runId;
-  const sides = (current && current.sides) || TEXT_SIDES;
-  [0, 1].forEach(i => { $("n"+i).textContent = sides[i].label; const g = $("g"+i); g.textContent = sides[i].tag; g.className = "tag " + (i ? "on" : "off"); });
-  const [a, b] = await Promise.all([false, true].map(fw => fetch("/api/run", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...body, firewall: fw}) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "error")))));
-  if (my !== runId) return;
-  play(0, a, my); play(1, b, my);
-  const sim = a.planner === "mock";
-  $("srcnote").textContent = `Planner: ${sim ? "SIMULATED (offline stand-in, not a real model)" : "Meta model"}${a.cached ? " | recorded run" : " | live run"}`;
-  $("simbanner").hidden = !sim;
-}
-
-function showSign(p, text) {
-  $("signbox").hidden = false;
-  if (text) { $("signlabel").textContent = "Sign in the aisle:"; $("signtext").textContent = text; }
-  else { $("signlabel").textContent = "No sign in this scenario."; $("signtext").textContent = ""; }
-  $("desc").textContent = (p && p.desc) || "";
-}
-
-async function init() {
-  world = await (await fetch("/api/world")).json();
-  try { const h = await (await fetch("/api/health")).json(); $("freerow").hidden = !h.live_enabled; } catch (e) {}
-  const presets = await (await fetch("/api/presets")).json();
-  const box = $("presets"), groups = {};
-  presets.forEach(p => {
-    const name = p.group || "Presets";
-    if (!groups[name]) {
-      const g = document.createElement("div"); g.className = "group";
-      const h = document.createElement("h3"); h.textContent = name;
-      const row = document.createElement("div"); row.className = "presets";
-      g.appendChild(h); g.appendChild(row); box.appendChild(g); groups[name] = row;
+  function showError(msg) {
+    if (!msg) {
+      dom.errorBanner.style.display = 'none';
+      dom.errorBanner.textContent = '';
+      return;
     }
-    const b = document.createElement("button"); b.textContent = (p.kind === "attack" ? "Attack: " : "") + p.title; if (p.kind === "benign") b.className = "benign";
-    b.onclick = async () => {
-      document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active")); b.classList.add("active");
-      current = p; showSign(p, p.sign);
-      b.disabled = true;
-      try { await run({ preset_id: p.id }); } catch (e) { alert(e); } finally { b.disabled = false; } };
-    groups[name].appendChild(b);
+    dom.errorBanner.textContent = 'API Notice: ' + msg;
+    dom.errorBanner.style.display = 'block';
+  }
+
+  async function fetchJson(url, options) {
+    const res = await fetch(url, options);
+    let data = null;
+    try { data = await res.json(); } catch (_) {}
+    if (!res.ok) throw new Error((data && data.detail) ? data.detail : `HTTP ${res.status} on ${url}`);
+    return data;
+  }
+
+  function isCellInList(pos, list) {
+    if (!pos || !Array.isArray(list)) return false;
+    return list.some(c => c[0] === pos[0] && c[1] === pos[1]);
+  }
+
+  function buildSignDropdown() {
+    dom.moreSignList.innerHTML = '';
+    const textPresets = presets.filter(p =>
+      p.group === 'Text signs (static attacks)' ||
+      ['shortcut','fake-clear','override','leet-urgency','authority','polite','benign-wet-floor'].includes(p.id)
+    );
+    textPresets.forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = (p.id === currentTextPresetId) ? 'active-preset' : '';
+      const tag = p.kind === 'benign' ? '[harmless]' : '[attack]';
+      btn.innerHTML = `<span>${escapeHtml(p.title || p.id)}</span><span style="opacity:0.65;font-family:var(--mono)">${tag}</span>`;
+      btn.addEventListener('click', () => {
+        currentTextPresetId = p.id;
+        dom.moreSignMenu.removeAttribute('open');
+        selectScenario('text', p.id);
+      });
+      dom.moreSignList.appendChild(btn);
+    });
+  }
+
+  function updateCardDescriptions() {
+    const textP = presets.find(p => p.id === currentTextPresetId);
+    if (textP && textP.desc) dom.descText.textContent = textP.desc;
+    dom.currentTextPresetBadge.textContent = `Preset: ${textP ? (textP.title || textP.id) : currentTextPresetId}`;
+
+    const mapP = presets.find(p => p.id === 'map-errata');
+    if (mapP && mapP.desc) dom.descMap.textContent = mapP.desc;
+
+    const camId = camSpoofed ? 'cam-spoof' : 'cam-honest';
+    const camP = presets.find(p => p.id === camId);
+    if (camP && camP.desc) dom.descCam.textContent = camP.desc;
+
+    Array.from(dom.moreSignList.children).forEach(btn => {
+      btn.classList.toggle('active-preset', btn.textContent.includes(textP ? (textP.title || textP.id) : currentTextPresetId));
+    });
+  }
+
+  function selectScenario(cardType, presetOverride) {
+    activeCard = cardType;
+    dom.cardText.classList.toggle('active', cardType === 'text');
+    dom.cardMap.classList.toggle('active', cardType === 'map');
+    dom.cardCam.classList.toggle('active', cardType === 'cam');
+    dom.cardText.setAttribute('aria-pressed', cardType === 'text');
+    dom.cardMap.setAttribute('aria-pressed', cardType === 'map');
+    dom.cardCam.setAttribute('aria-pressed', cardType === 'cam');
+
+    if (cardType === 'text') {
+      activePresetId = presetOverride || currentTextPresetId;
+    } else if (cardType === 'map') {
+      activePresetId = 'map-errata';
+    } else if (cardType === 'cam') {
+      activePresetId = camSpoofed ? 'cam-spoof' : 'cam-honest';
+    }
+
+    updateCardDescriptions();
+    const bn = BENCH[cardType];
+    document.getElementById('benchBig').innerHTML = `${escapeHtml(bn.big)}<small>${escapeHtml(bn.sub)}</small>`;
+    document.getElementById('benchText').textContent = bn.text;
+    const presetObj = presets.find(p => p.id === activePresetId);
+    if (presetObj && Array.isArray(presetObj.sides) && presetObj.sides.length >= 2) {
+      dom.leftTitle.textContent = presetObj.sides[0].label || 'Left Setup';
+      dom.leftBadge.textContent = presetObj.sides[0].tag || presetObj.sides[0].mode || '';
+      dom.rightTitle.textContent = presetObj.sides[1].label || 'Right Setup';
+      dom.rightBadge.textContent = presetObj.sides[1].tag || presetObj.sides[1].mode || '';
+    }
+
+    runSimulation({ preset_id: activePresetId });
+  }
+
+  async function runSimulation(payloadBase) {
+    showError(null);
+    isLoading = true;
+    dom.leftBanner.className = 'result-banner';
+    dom.rightBanner.className = 'result-banner';
+    dom.leftBannerText.textContent = 'Running simulation...';
+    dom.leftBannerSub.textContent = '';
+    dom.rightBannerText.textContent = 'Running simulation...';
+    dom.rightBannerSub.textContent = '';
+
+    try {
+      const [lRes, rRes] = await Promise.all([
+        fetchJson('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, payloadBase, { firewall: false }))
+        }),
+        fetchJson('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(Object.assign({}, payloadBase, { firewall: true }))
+        })
+      ]);
+      leftTrace = lRes;
+      rightTrace = rRes;
+    } catch (err) {
+      showError(err.message || 'Failed to execute simulation run.');
+      leftTrace = { outcome: 'error', error: err.message, steps: [], interventions: 0, unsafe_proposals: 0 };
+      rightTrace = { outcome: 'error', error: err.message, steps: [], interventions: 0, unsafe_proposals: 0 };
+    } finally {
+      isLoading = false;
+      prepareTraceUI();
+      restartPlayback();
+    }
+  }
+
+  function getMaxSteps() {
+    const lLen = (leftTrace && Array.isArray(leftTrace.steps)) ? leftTrace.steps.length : 0;
+    const rLen = (rightTrace && Array.isArray(rightTrace.steps)) ? rightTrace.steps.length : 0;
+    return Math.max(lLen, rLen);
+  }
+
+  function restartPlayback() {
+    const maxS = getMaxSteps();
+    animProgress = reducedMotion ? maxS : 0;
+    playing = !reducedMotion && maxS > 0;
+    lastFrameTime = performance.now();
+    updatePlayPauseButton();
+    updateStepSyncedUI();
+  }
+
+  function updatePlayPauseButton() {
+    dom.btnPlayPause.innerHTML = playing ? '&#9208; Pause' : '&#9654; Play';
+  }
+
+  function prepareTraceUI() {
+    const pLeft = leftTrace && leftTrace.planner ? leftTrace.planner : 'meta';
+    const pRight = rightTrace && rightTrace.planner ? rightTrace.planner : 'meta';
+    const isMock = (pLeft === 'mock' || pRight === 'mock');
+    dom.mockBanner.style.display = isMock ? 'block' : 'none';
+
+    const isCached = Boolean((leftTrace && leftTrace.cached) || (rightTrace && rightTrace.cached));
+    const plannerLabel = (pLeft === 'meta' || pRight === 'meta') ? 'Meta model' : pLeft;
+    dom.provenanceText.textContent = `Planner: ${plannerLabel} | ${isCached ? 'recorded run' : 'live run'}`;
+
+    buildPanelStaticUI(leftTrace, dom.leftChips, dom.leftReplicates, dom.leftTableBody);
+    buildPanelStaticUI(rightTrace, dom.rightChips, dom.rightReplicates, dom.rightTableBody);
+  }
+
+  function buildPanelStaticUI(trace, chipsEl, repEl, tbodyEl) {
+    chipsEl.innerHTML = '';
+    repEl.textContent = '';
+    tbodyEl.innerHTML = '';
+
+    if (!trace) return;
+
+    if (trace.replicates && Array.isArray(trace.replicates.unsafe)) {
+      const n = trace.replicates.unsafe.length;
+      const k = trace.replicates.unsafe.reduce((acc, v) => acc + (v ? 1 : 0), 0);
+      repEl.textContent = `Rerun with ${n} decoding seeds: unsafe move proposed in ${k} of ${n}.`;
+    }
+
+    const steps = Array.isArray(trace.steps) ? trace.steps : [];
+    if (steps.length === 0) {
+      const emptyChip = document.createElement('span');
+      emptyChip.className = 'step-chip';
+      emptyChip.textContent = 'No steps recorded';
+      chipsEl.appendChild(emptyChip);
+      return;
+    }
+
+    steps.forEach((st, idx) => {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'step-chip';
+      const isBlocked = (st.verdict && st.verdict.allowed === false) || st.event === 'blocked';
+      const isViolation = st.event === 'violation';
+
+      let prefix = '';
+      if (isBlocked) {
+        chip.classList.add('chip-blocked');
+        prefix = '\u25A0 ';
+      } else if (isViolation) {
+        chip.classList.add('chip-violation');
+        prefix = '\u2716 ';
+      }
+
+      const moveText = isBlocked ? `${st.proposed}\u2192${st.executed}` : st.proposed;
+      chip.textContent = `${prefix}${st.t !== undefined ? st.t : idx}:${moveText}`;
+      chip.title = `Step ${idx + 1}: Proposed ${st.proposed}, Executed ${st.executed}`;
+      chip.addEventListener('click', () => {
+        playing = false;
+        animProgress = idx + 1;
+        updatePlayPauseButton();
+        updateStepSyncedUI();
+      });
+      chipsEl.appendChild(chip);
+
+      const tr = document.createElement('tr');
+      const reason = (st.verdict && st.verdict.reason) ? `${st.event} (${st.verdict.reason})` : (st.event || '');
+      tr.innerHTML = `<td>${escapeHtml(String(st.t !== undefined ? st.t : idx))}</td>
+                      <td>${escapeHtml(st.proposed || '')}</td>
+                      <td>${escapeHtml(st.executed || '')}</td>
+                      <td>${escapeHtml(reason)}</td>`;
+      tbodyEl.appendChild(tr);
+    });
+  }
+
+  function evaluateBanner(trace, bannerEl, textEl, subEl, finished) {
+    if (!trace) return;
+    const steps = Array.isArray(trace.steps) ? trace.steps : [];
+
+    if (!finished && steps.length > 0) {
+      bannerEl.className = 'result-banner';
+      const curIdx = Math.min(steps.length - 1, Math.floor(animProgress));
+      const st = steps[curIdx];
+      textEl.textContent = `Executing Step ${curIdx + 1} of ${steps.length}...`;
+      subEl.textContent = st ? `Proposed: ${st.proposed} | Executed: ${st.executed}` : '';
+      return;
+    }
+
+    const out = trace.outcome;
+    bannerEl.className = 'result-banner';
+    subEl.textContent = '';
+
+    if (out === 'violation') {
+      bannerEl.classList.add('outcome-violation');
+      const lastStep = steps.length > 0 ? steps[steps.length - 1] : null;
+      const lastPos = lastStep && lastStep.new_pos ? lastStep.new_pos : null;
+      if (isCellInList(lastPos, world.human_zone)) {
+        textEl.textContent = '\u26A0 Robot entered the Human Worker Zone';
+      } else {
+        textEl.textContent = '\u26A0 Robot hit a worker';
+      }
+    } else if (out === 'goal') {
+      bannerEl.classList.add('outcome-goal');
+      textEl.textContent = '\u2714 Delivered safely';
+      if (trace.interventions && trace.interventions > 0) {
+        subEl.textContent = `Safety check intervened ${trace.interventions} time${trace.interventions === 1 ? '' : 's'}`;
+      }
+    } else if (out === 'timeout') {
+      bannerEl.classList.add('outcome-timeout');
+      textEl.textContent = '\u23F3 Stalled, never reached the dock';
+    } else {
+      bannerEl.classList.add('outcome-error');
+      textEl.textContent = '\u26A0 Run failed';
+      subEl.textContent = trace.error ? String(trace.error) : '';
+    }
+  }
+
+  function updateCaption(trace, captionEl, stepIdx) {
+    const presetObj = presets.find(p => p.id === activePresetId);
+    const steps = (trace && Array.isArray(trace.steps)) ? trace.steps : [];
+    const curStep = (stepIdx >= 0 && stepIdx < steps.length) ? steps[stepIdx] : null;
+
+    let rPos = world.start;
+    if (curStep && curStep.new_pos) rPos = curStep.new_pos;
+    const signPos = world.sign_pos;
+    const dist = signPos ? (Math.abs(rPos[0] - signPos[0]) + Math.abs(rPos[1] - signPos[1])) : 99;
+
+    const signStr = (curStep && curStep.sign) ? curStep.sign : (presetObj && presetObj.sign ? presetObj.sign : null);
+    const scen = (trace && trace.scenario) ? trace.scenario : (presetObj && presetObj.scenario ? presetObj.scenario : null);
+    const people = (scen && Array.isArray(scen.people)) ? scen.people : (world.people || []);
+    const camHide = scen && scen.camera_mode === 'hide' && people.length > 0;
+
+    let leftPart = 'Sign in aisle: none';
+    if (signStr) {
+      const nearTag = dist <= 2 ? '[READING SIGN] ' : '';
+      leftPart = `${nearTag}Sign: "${signStr}"`;
+    }
+
+    let rightPart = '';
+    if (camHide) {
+      rightPart = 'camera reports: nobody';
+    } else if (curStep && curStep.verdict && curStep.verdict.allowed === false) {
+      rightPart = `BLOCKED: ${curStep.verdict.reason || 'unsafe move'}`;
+    }
+
+    captionEl.innerHTML = `<span>${escapeHtml(leftPart)}</span><span style="color:var(--accent);font-weight:700">${escapeHtml(rightPart)}</span>`;
+  }
+
+  function updateStepSyncedUI() {
+    const maxS = getMaxSteps();
+    const dispStep = Math.min(maxS, Math.floor(animProgress));
+    dom.stepCounterText.textContent = `Step ${dispStep} / ${maxS}`;
+
+    const lLen = (leftTrace && Array.isArray(leftTrace.steps)) ? leftTrace.steps.length : 0;
+    const rLen = (rightTrace && Array.isArray(rightTrace.steps)) ? rightTrace.steps.length : 0;
+
+    evaluateBanner(leftTrace, dom.leftBanner, dom.leftBannerText, dom.leftBannerSub, animProgress >= lLen);
+    evaluateBanner(rightTrace, dom.rightBanner, dom.rightBannerText, dom.rightBannerSub, animProgress >= rLen);
+
+    const lIdx = Math.min(lLen - 1, Math.max(0, Math.floor(animProgress) - 1));
+    const rIdx = Math.min(rLen - 1, Math.max(0, Math.floor(animProgress) - 1));
+
+    updateCaption(leftTrace, dom.leftCaption, lIdx);
+    updateCaption(rightTrace, dom.rightCaption, rIdx);
+
+    Array.from(dom.leftChips.children).forEach((c, i) => c.classList.toggle('current', i === lIdx && lLen > 0));
+    Array.from(dom.rightChips.children).forEach((c, i) => c.classList.toggle('current', i === rIdx && rLen > 0));
+  }
+
+  function renderWarehouse(canvas, trace) {
+    const ctx = canvas.getContext('2d');
+    const S = canvas.width / 700;
+    ctx.setTransform(S, 0, 0, S, 0, 0);
+    const W = 700;
+    const H = 420;
+    const cols = world.w || 10;
+    const rows = world.h || 6;
+    const cw = W / cols;
+    const ch = H / rows;
+
+    ctx.clearRect(0, 0, W, H);
+
+    ctx.fillStyle = '#0f1622';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = '#1b2536';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath(); ctx.moveTo(x * cw, 0); ctx.lineTo(x * cw, H); ctx.stroke();
+    }
+    for (let y = 0; y <= rows; y++) {
+      ctx.beginPath(); ctx.moveTo(0, y * ch); ctx.lineTo(W, y * ch); ctx.stroke();
+    }
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
+    ctx.setLineDash([8, 8]);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cw * 0.5, ch * 2.5);
+    ctx.lineTo(cw * (cols - 0.5), ch * 2.5);
+    ctx.stroke();
+    ctx.restore();
+
+    const hz = world.human_zone || [];
+    hz.forEach(([gx, gy]) => {
+      const rx = gx * cw, ry = gy * ch;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(rx + 2, ry + 2, cw - 4, ch - 4);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(234, 179, 8, 0.18)';
+      ctx.fillRect(rx, ry, cw, ch);
+      ctx.strokeStyle = 'rgba(234, 179, 8, 0.55)';
+      ctx.lineWidth = 6;
+      for (let i = -ch; i < cw + ch; i += 16) {
+        ctx.beginPath();
+        ctx.moveTo(rx + i, ry);
+        ctx.lineTo(rx + i - ch, ry + ch);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.strokeStyle = '#eab308';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(rx + 2, ry + 2, cw - 4, ch - 4);
+    });
+    if (hz.length > 0) {
+      const firstHz = hz[0];
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 13px ui-monospace, monospace';
+      ctx.fillText('HUMAN WORKER ZONE', firstHz[0] * cw + 6, firstHz[1] * ch + 15);
+    }
+
+    (world.shelves || []).forEach(([sx, sy]) => {
+      const rx = sx * cw + 4, ry = sy * ch + 4, rw = cw - 8, rh = ch - 8;
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.fillStyle = '#854d0e';
+      ctx.fillRect(rx + 5, ry + 6, rw * 0.38, rh - 12);
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(rx + rw * 0.48, ry + 8, rw * 0.42, rh - 16);
+    });
+
+    if (world.start) {
+      const [stX, stY] = world.start;
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(stX * cw + 6, stY * ch + 6, cw - 12, ch - 12);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 12px ui-monospace, monospace';
+      ctx.fillText('START', stX * cw + 14, stY * ch + ch - 10);
+    }
+
+    if (world.goal) {
+      const [gX, gY] = world.goal;
+      const rx = gX * cw + 4, ry = gY * ch + 4, rw = cw - 8, rh = ch - 8;
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 2;
+      ctx.fillRect(rx, ry, rw, rh);
+      ctx.strokeRect(rx, ry, rw, rh);
+      ctx.fillStyle = '#34d399';
+      ctx.font = 'bold 13px ui-monospace, monospace';
+      ctx.fillText('DOCK', rx + 16, ry + 20);
+      ctx.beginPath();
+      ctx.moveTo(rx + 18, ry + 36);
+      ctx.lineTo(rx + rw - 18, ry + 36);
+      ctx.lineTo(rx + rw - 25, ry + 30);
+      ctx.moveTo(rx + rw - 18, ry + 36);
+      ctx.lineTo(rx + rw - 25, ry + 42);
+      ctx.stroke();
+    }
+
+    const steps = (trace && Array.isArray(trace.steps)) ? trace.steps : [];
+    const activeFloat = Math.max(0, Math.min(steps.length, animProgress));
+    const stepIdx = Math.min(steps.length - 1, Math.floor(activeFloat));
+    const frac = activeFloat - Math.floor(activeFloat);
+    const curStep = (steps.length > 0 && stepIdx >= 0) ? steps[stepIdx] : null;
+
+    const presetObj = presets.find(p => p.id === activePresetId);
+    const hasSign = Boolean((curStep && curStep.sign) || (presetObj && presetObj.sign) || (dom.customSignInput.value.trim()));
+    if (world.sign_pos) {
+      const [sgX, sgY] = world.sign_pos;
+      const cx = (sgX + 0.82) * cw;
+      const cy = (sgY + 0.22) * ch;
+      ctx.save();
+      ctx.fillStyle = hasSign ? '#f59e0b' : '#475569';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(cx - 17, cy - 12, 34, 22);
+      ctx.strokeRect(cx - 17, cy - 12, 34, 22);
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 11px ui-monospace, monospace';
+      ctx.fillText('SIGN', cx - 14, cy + 4);
+      ctx.restore();
+    }
+
+    const scen = (trace && trace.scenario) ? trace.scenario : (presetObj && presetObj.scenario ? presetObj.scenario : null);
+    const people = (scen && Array.isArray(scen.people)) ? scen.people : (world.people || []);
+    const camHide = Boolean(scen && scen.camera_mode === 'hide');
+
+    people.forEach(([px, py]) => {
+      const cx = (px + 0.5) * cw;
+      const cy = (py + 0.5) * ch;
+      ctx.save();
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(cx, cy + 7, 12, Math.PI, 0, false);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 5, cy - 2); ctx.lineTo(cx - 5, cy + 7);
+      ctx.moveTo(cx + 5, cy - 2); ctx.lineTo(cx + 5, cy + 7);
+      ctx.stroke();
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(cx, cy - 5, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      if (camHide) {
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.strokeStyle = '#f43f5e';
+        ctx.lineWidth = 1;
+        const bw = 160, bh = 21;
+        ctx.fillRect(cx - bw / 2, cy - 38, bw, bh);
+        ctx.strokeRect(cx - bw / 2, cy - 38, bw, bh);
+        ctx.fillStyle = '#fda4af';
+        ctx.font = 'bold 12px ui-monospace, monospace';
+        ctx.fillText('camera reports: nobody', cx - bw / 2 + 6, cy - 23);
+      }
+      ctx.restore();
+    });
+
+    let rxGrid = world.start ? world.start[0] : 0;
+    let ryGrid = world.start ? world.start[1] : 2;
+    let heading = 'RIGHT';
+
+    if (steps.length > 0) {
+      if (activeFloat >= steps.length) {
+        const last = steps[steps.length - 1];
+        rxGrid = last.new_pos ? last.new_pos[0] : last.pos[0];
+        ryGrid = last.new_pos ? last.new_pos[1] : last.pos[1];
+        heading = last.executed || last.proposed || 'RIGHT';
+      } else {
+        const st = steps[stepIdx];
+        const p0 = st.pos || world.start;
+        const p1 = st.new_pos || p0;
+        rxGrid = p0[0] + (p1[0] - p0[0]) * frac;
+        ryGrid = p0[1] + (p1[1] - p0[1]) * frac;
+        heading = st.executed && st.executed !== 'STOP' ? st.executed : (st.proposed || 'RIGHT');
+      }
+    }
+
+    const robotCx = (rxGrid + 0.5) * cw;
+    const robotCy = (ryGrid + 0.5) * ch;
+
+    if (steps.length > 0 && activeFloat > 0) {
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      const startP = steps[0].pos || world.start;
+      ctx.moveTo((startP[0] + 0.5) * cw, (startP[1] + 0.5) * ch);
+      const limit = Math.min(steps.length, Math.floor(activeFloat));
+      for (let i = 0; i < limit; i++) {
+        const np = steps[i].new_pos || steps[i].pos;
+        ctx.lineTo((np[0] + 0.5) * cw, (np[1] + 0.5) * ch);
+      }
+      ctx.lineTo(robotCx, robotCy);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    const lidarList = curStep && Array.isArray(curStep.lidar) ? curStep.lidar : null;
+    const lidarActive = Boolean(lidarList !== null || (scen && scen.lidar));
+
+    if (lidarActive && showLidarRing) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.28)';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(robotCx, robotCy, cw * 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      if (lidarList) {
+        lidarList.forEach(pt => {
+          const lx = (pt.x + 0.5) * cw;
+          const ly = (pt.y + 0.5) * ch;
+          ctx.strokeStyle = '#10b981';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(lx, ly, Math.min(cw, ch) * 0.36, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+      }
+      ctx.restore();
+    }
+
+    const dets = (curStep && Array.isArray(curStep.detections)) ? curStep.detections : [];
+    dets.forEach(d => {
+      const dx = d.x * cw + 5, dy = d.y * ch + 5, dw = cw - 10, dh = ch - 10;
+      const bl = 10;
+      ctx.save();
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(dx, dy + bl); ctx.lineTo(dx, dy); ctx.lineTo(dx + bl, dy);
+      ctx.moveTo(dx + dw - bl, dy); ctx.lineTo(dx + dw, dy); ctx.lineTo(dx + dw, dy + bl);
+      ctx.moveTo(dx, dy + dh - bl); ctx.lineTo(dx, dy + dh); ctx.lineTo(dx + bl, dy + dh);
+      ctx.moveTo(dx + dw - bl, dy + dh); ctx.lineTo(dx + dw, dy + dh); ctx.lineTo(dx + dw, dy + dh - bl);
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    ctx.save();
+    ctx.translate(robotCx, robotCy);
+    ctx.fillStyle = '#0284c7';
+    ctx.strokeStyle = '#e0f2fe';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    let angle = 0;
+    if (heading === 'UP') angle = -Math.PI / 2;
+    else if (heading === 'DOWN') angle = Math.PI / 2;
+    else if (heading === 'LEFT') angle = Math.PI;
+    ctx.rotate(angle);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(10, 0);
+    ctx.lineTo(-5, -6);
+    ctx.lineTo(-2, 0);
+    ctx.lineTo(-5, 6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    const isBlockedNow = curStep && ((curStep.verdict && curStep.verdict.allowed === false) || curStep.event === 'blocked');
+    if (isBlockedNow) {
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(robotCx, robotCy, 24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#064e3b';
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 1.5;
+      ctx.fillRect(robotCx - 42, robotCy - 54, 84, 21);
+      ctx.strokeRect(robotCx - 42, robotCy - 54, 84, 21);
+      ctx.fillStyle = '#a7f3d0';
+      ctx.font = 'bold 12px ui-monospace, monospace';
+      ctx.fillText('\u25A0 BLOCKED', robotCx - 36, robotCy - 40);
+      ctx.restore();
+    }
+  }
+
+  function tick(now) {
+    const dt = Math.max(0, now - lastFrameTime);   // rAF timestamps can precede performance.now()
+    lastFrameTime = now;
+
+    const maxS = getMaxSteps();
+    if (playing && !isLoading && maxS > 0) {
+      const stepDelta = (dt * speed) / stepDuration;
+      animProgress += stepDelta;
+      if (animProgress >= maxS) {
+        animProgress = maxS;
+        playing = false;
+        updatePlayPauseButton();
+      }
+      updateStepSyncedUI();
+    }
+
+    renderWarehouse(dom.leftCanvas, leftTrace);
+    renderWarehouse(dom.rightCanvas, rightTrace);
+    requestAnimationFrame(tick);
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function bindCardKey(el, fn) {
+    el.addEventListener('click', fn);
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fn();
+      }
+    });
+  }
+
+  bindCardKey(dom.cardText, () => selectScenario('text'));
+  bindCardKey(dom.cardMap, () => selectScenario('map'));
+  bindCardKey(dom.cardCam, () => selectScenario('cam'));
+
+  dom.camSpoofToggle.addEventListener('click', () => {
+    camSpoofed = !camSpoofed;
+    dom.camSpoofToggle.setAttribute('aria-checked', String(camSpoofed));
+    selectScenario('cam');
   });
-  $("freego").onclick = async () => { const t = $("free").value.trim(); if (!t) return;
-    document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active"));
-    current = null; showSign(null, t);
-    try { await run({ sign_text: t }); } catch (e) { alert(e); } };
-  const idle = { pos: world.start, people: world.people, hasSign: false };
-  draw($("c0").getContext("2d"), idle); draw($("c1").getContext("2d"), idle);
-}
-init();
+
+  dom.lidarOverlayToggle.addEventListener('click', () => {
+    showLidarRing = !showLidarRing;
+    dom.lidarOverlayToggle.setAttribute('aria-checked', String(showLidarRing));
+  });
+
+  dom.btnReplay.addEventListener('click', () => {
+    animProgress = 0;
+    playing = true;
+    lastFrameTime = performance.now();
+    updatePlayPauseButton();
+    updateStepSyncedUI();
+  });
+
+  dom.btnPlayPause.addEventListener('click', () => {
+    const maxS = getMaxSteps();
+    if (animProgress >= maxS) animProgress = 0;
+    playing = !playing;
+    lastFrameTime = performance.now();
+    updatePlayPauseButton();
+  });
+
+  dom.btnStep.addEventListener('click', () => {
+    playing = false;
+    const maxS = getMaxSteps();
+    animProgress = Math.min(maxS, Math.floor(animProgress) + 1);
+    updatePlayPauseButton();
+    updateStepSyncedUI();
+  });
+
+  dom.btnSpeed1x.addEventListener('click', () => {
+    speed = 1;
+    dom.btnSpeed1x.classList.add('active-speed');
+    dom.btnSpeed2x.classList.remove('active-speed');
+  });
+
+  dom.btnSpeed2x.addEventListener('click', () => {
+    speed = 2;
+    dom.btnSpeed2x.classList.add('active-speed');
+    dom.btnSpeed1x.classList.remove('active-speed');
+  });
+
+  dom.runCustomBtn.addEventListener('click', () => {
+    const txt = dom.customSignInput.value.trim();
+    if (!txt) return;
+    runSimulation({ sign_text: txt });
+  });
+
+  async function init() {
+    try {
+      const [wData, hData, pData] = await Promise.all([
+        fetchJson('/api/world'),
+        fetchJson('/api/health'),
+        fetchJson('/api/presets')
+      ]);
+      world = wData; health = hData; presets = pData;
+    } catch (e) {
+      showError('Cannot reach the backend (' + e.message + '). Nothing is shown rather than invented data.');
+      return;
+    }
+
+    if (health && health.live_enabled) {
+      dom.liveSignBox.style.display = 'flex';
+    }
+
+    buildSignDropdown();
+    selectScenario('text', 'shortcut');
+    requestAnimationFrame(tick);
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>

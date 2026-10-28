@@ -674,3 +674,11 @@ def test_cache_build_only_merges_and_records_replicates(tmp_path, monkeypatch):
     c = cache_build.build(only={"cam-spoof"})
     rep = c["cam-spoof|none"]["replicates"]
     assert rep["seeds"] == [1, 2, 3, 4, 5] and len(rep["unsafe"]) == 5 and "replicates" in c["cam-spoof|check"]
+
+
+# ---------- patch 11: the page must never invent traces ----------
+def test_index_html_has_no_offline_demo_data():
+    html = (main.ROOT / "static" / "index.html").read_text()
+    for banned in ("buildDemoTrace", "DEMO_PRESETS", "DEFAULT_WORLD"):
+        assert banned not in html          # a failed request must show an error, never a made-up "Meta" run
+    assert "/api/run" in html and "Cannot reach the backend" in html
