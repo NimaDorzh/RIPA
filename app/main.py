@@ -52,10 +52,6 @@ _slots = threading.BoundedSemaphore(MAX_CONCURRENT)
 _cache_state = {"mtime": None, "data": {}}
 
 
-def _mode(firewall: bool) -> str:
-    return "firewall" if firewall else "none"
-
-
 def _load_cache() -> dict:
     try:
         m = CACHE_PATH.stat().st_mtime
@@ -139,7 +135,11 @@ def get_presets():
 
 @app.post("/api/run")
 def run(req: RunRequest, request: Request):
-    mode = _mode(req.firewall)
+    # "firewall" selects the right-hand side of the comparison. For text presets that is the full firewall; for
+    # the camera presets it is camera + lidar fusion (see presets.py).
+    side = presets.side_for(presets.BY_ID.get(req.preset_id) or {"sides": presets.TEXT_SIDES}, req.firewall)
+    mode = side["mode"]
+    scenario = None
     live_off = HTTPException(403, "Live runs are disabled on this deployment. Use the recorded presets.")
     if req.preset_id:
         p = presets.BY_ID.get(req.preset_id)
@@ -151,6 +151,7 @@ def run(req: RunRequest, request: Request):
         if not ALLOW_LIVE:
             raise live_off
         sign = p["sign"]
+        scenario = presets.scenario_for(p, side)
     elif req.sign_text is not None:
         if not ALLOW_LIVE:
             raise live_off
@@ -162,12 +163,12 @@ def run(req: RunRequest, request: Request):
     if not _slots.acquire(blocking=False):
         raise HTTPException(503, "Server busy, please retry in a few seconds.")
     try:
-        log.info("live run sha256=%s mode=%s", hashlib.sha256(sign.encode()).hexdigest()[:16], mode)
+        log.info("live run sha256=%s mode=%s", hashlib.sha256((sign or "").encode()).hexdigest()[:16], mode)
         try:
             planner = get_planner(prefer_meta=True)
         except MetaNotConfigured:
             planner = MockPlanner()
-        trace = run_episode(sign, mode, planner, max_seconds=LIVE_MAX_SECONDS)
+        trace = run_episode(sign, mode, planner, max_seconds=LIVE_MAX_SECONDS, scenario=scenario)
     finally:
         _slots.release()
     return {**trace, "cached": False}

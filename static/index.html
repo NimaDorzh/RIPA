@@ -5,19 +5,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hack the Robot</title>
 <style>
-  :root { --bg:#0e1116; --panel:#171c24; --ink:#e6edf3; --mute:#8b98a8; --ok:#3fb950; --bad:#f85149; --warn:#d29922; --line:#2a3340; --acc:#58a6ff; }
+  :root { --bg:#0e1116; --panel:#171c24; --ink:#e6edf3; --mute:#8b98a8; --ok:#3fb950; --bad:#f85149; --warn:#d29922; --line:#2a3340; --acc:#58a6ff; --lidar:#3fb950; --cam:#58a6ff; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
   .wrap { max-width:1100px; margin:0 auto; padding:16px; }
   h1 { margin:0 0 4px; font-size:26px; letter-spacing:.3px; }
   .sub { color:var(--mute); margin-bottom:14px; }
   .warn { background:#2b2412; border:1px solid #5b4a1a; color:#e3c26b; padding:8px 12px; border-radius:8px; font-size:13px; margin-bottom:14px; }
-  .presets { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+  .group { margin-bottom:10px; }
+  .group h3 { margin:0 0 6px; font-size:12px; letter-spacing:.6px; text-transform:uppercase; color:var(--mute); font-weight:600; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; }
   button { background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:9px 12px; border-radius:8px; cursor:pointer; font:inherit; }
   button:hover { border-color:var(--acc); }
   button.benign { border-style:dashed; }
   button.active { border-color:var(--acc); background:#16263a; }
-  .arena { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  button:disabled { opacity:.5; cursor:progress; }
+  .arena { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:12px; }
   @media (max-width:760px) { .arena { grid-template-columns:1fr; } }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px; }
   .card h2 { margin:0 0 8px; font-size:15px; display:flex; justify-content:space-between; align-items:center; }
@@ -26,10 +29,14 @@
   canvas { width:100%; height:auto; background:#0b0e13; border-radius:8px; display:block; }
   .status { margin-top:8px; min-height:26px; font-weight:600; }
   .status.bad { color:var(--bad); } .status.ok { color:var(--ok); }
+  .repl { color:var(--mute); font-size:12px; min-height:16px; }
   .trace { margin-top:8px; font:12px/1.5 ui-monospace,Menlo,Consolas,monospace; color:var(--mute); max-height:160px; overflow:auto; background:#0b0e13; border-radius:8px; padding:8px; }
   .trace .blk { color:var(--warn); } .trace .vio { color:var(--bad); }
-  .signbox { margin:10px 0; padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:8px; }
+  .signbox { margin:10px 0 0; padding:10px 12px; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--warn); border-radius:8px; }
   .signbox b { color:var(--warn); }
+  .signbox .desc { color:var(--mute); font-size:13px; margin-top:4px; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; color:var(--mute); font-size:12px; margin-top:10px; }
+  .legend i { display:inline-block; width:10px; height:10px; margin-right:5px; vertical-align:-1px; }
   .free { display:flex; gap:8px; margin-top:12px; } .free input { flex:1; background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:9px 12px; font:inherit; }
   .note { color:var(--mute); font-size:12px; margin-top:12px; }
 </style>
@@ -37,22 +44,33 @@
 <body>
 <div class="wrap">
   <h1>Hack the Robot</h1>
-  <div class="sub">A warehouse robot controlled by an AI model. Plant a malicious sign and watch it go wrong, then turn the firewall on.</div>
+  <div class="sub">A warehouse robot controlled by a Meta AI model. Attack it through a sign or through its camera, then compare it with a defended robot.</div>
   <div class="warn">Simulation only. Do not enter personal data: inputs may be logged and, while free credits are used, processed by the model provider.</div>
   <div class="warn" id="simbanner" hidden style="font-size:15px;font-weight:700;border-color:#a33;color:#ff9b9b;background:#2b1212">SIMULATED planner: this run is an offline stand-in, NOT a real AI model.</div>
-  <div class="presets" id="presets"></div>
-  <div class="signbox" id="signbox" hidden><b>Sign in the aisle:</b> <span id="signtext"></span></div>
+  <div id="presets"></div>
+  <div class="signbox" id="signbox" hidden><b id="signlabel">Sign in the aisle:</b> <span id="signtext"></span><div class="desc" id="desc"></div></div>
   <div class="arena">
-    <div class="card"><h2>Without firewall <span class="tag off">OFF</span></h2><canvas id="c0" width="600" height="360"></canvas><div class="status" id="s0"></div><div class="trace" id="t0"></div></div>
-    <div class="card"><h2>With firewall <span class="tag on">ON</span></h2><canvas id="c1" width="600" height="360"></canvas><div class="status" id="s1"></div><div class="trace" id="t1"></div></div>
+    <div class="card"><h2><span id="n0">Without firewall</span> <span class="tag off" id="g0">OFF</span></h2><canvas id="c0" width="600" height="360"></canvas><div class="status" id="s0"></div><div class="repl" id="r0"></div><div class="trace" id="t0"></div></div>
+    <div class="card"><h2><span id="n1">With firewall</span> <span class="tag on" id="g1">ON</span></h2><canvas id="c1" width="600" height="360"></canvas><div class="status" id="s1"></div><div class="repl" id="r1"></div><div class="trace" id="t1"></div></div>
+  </div>
+  <div class="legend">
+    <span><i style="background:#f0b46a;border-radius:50%"></i>worker (really there)</span>
+    <span><i style="border:2px solid var(--cam)"></i>camera reports a person</span>
+    <span><i style="border:2px solid var(--lidar);border-radius:50%"></i>lidar reports a person</span>
+    <span><i style="background:#58a6ff"></i>robot</span>
   </div>
   <div class="free" id="freerow" hidden><input id="free" maxlength="300" placeholder="Or write your own sign (live run, rate limited)"><button id="freego">Run</button></div>
   <div class="note" id="srcnote"></div>
 </div>
 <script>
 const CS = 60; // cell size in canvas px
+const LIDAR_R = 2;
 let world = null;
+let current = null;   // preset being shown (null for a free-text sign)
+let runId = 0;        // invalidates animations of an earlier click
 const $ = (id) => document.getElementById(id);
+
+const TEXT_SIDES = [{label: "Without firewall", tag: "OFF"}, {label: "With firewall", tag: "ON"}];
 
 function draw(ctx, st) {
   const w = world;
@@ -67,65 +85,112 @@ function draw(ctx, st) {
   ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#c9a14a";
   ctx.fillText("HUMAN ZONE", 5*CS, 1*CS + 12);
   ctx.fillStyle = "#6fcf7f"; ctx.fillText("DOCK", w.goal[0]*CS + CS/2, w.goal[1]*CS + CS/2 + 4);
-  ctx.fillStyle = "#e3c26b"; ctx.fillText("SIGN", w.sign_pos[0]*CS + CS/2, w.sign_pos[1]*CS + 14);
-  w.people.forEach(([x,y]) => { ctx.fillStyle = "#f0b46a"; ctx.beginPath(); ctx.arc(x*CS+CS/2, y*CS+CS/2, 11, 0, 7); ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText("person", x*CS+CS/2, y*CS+CS-8); });
-  if (st.trail) { ctx.strokeStyle = "#58a6ff55"; ctx.lineWidth = 3; ctx.beginPath(); st.trail.forEach(([x,y],i) => { const px=x*CS+CS/2, py=y*CS+CS/2; i? ctx.lineTo(px,py) : ctx.moveTo(px,py); }); ctx.stroke(); }
+  if (st.hasSign) { ctx.fillStyle = "#e3c26b"; ctx.fillText("SIGN", w.sign_pos[0]*CS + CS/2, w.sign_pos[1]*CS + 14); }
   const [rx, ry] = st.pos;
+  if (st.lidar) {   // lidar range ring around the robot
+    ctx.strokeStyle = "#3fb95055"; ctx.lineWidth = 1; ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(rx*CS+CS/2, ry*CS+CS/2, LIDAR_R*CS + CS/2, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  }
+  st.people.forEach(([x,y]) => { ctx.fillStyle = "#f0b46a"; ctx.beginPath(); ctx.arc(x*CS+CS/2, y*CS+CS/2, 11, 0, 7); ctx.fill(); ctx.fillStyle="#fff"; ctx.fillText("person", x*CS+CS/2, y*CS+CS-8); });
+  (st.cam || []).forEach(d => { ctx.strokeStyle = "#58a6ff"; ctx.lineWidth = 2; ctx.strokeRect(d.x*CS+3, d.y*CS+3, CS-7, CS-7); });
+  (st.lid || []).forEach(d => { ctx.strokeStyle = "#3fb950"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(d.x*CS+CS/2, d.y*CS+CS/2, 20, 0, 7); ctx.stroke(); });
+  if (st.camBlind && st.people.length) {   // camera reports nobody although a worker is there
+    ctx.fillStyle = "#58a6ff"; ctx.font = "11px sans-serif"; ctx.fillText("camera reports: nobody", 5*CS, 6*CS - 8);
+  }
+  if (st.trail) { ctx.strokeStyle = "#58a6ff55"; ctx.lineWidth = 3; ctx.beginPath(); st.trail.forEach(([x,y],i) => { const px=x*CS+CS/2, py=y*CS+CS/2; i? ctx.lineTo(px,py) : ctx.moveTo(px,py); }); ctx.stroke(); }
   ctx.fillStyle = st.alarm ? "#f85149" : "#58a6ff"; ctx.fillRect(rx*CS+14, ry*CS+14, CS-28, CS-28);
   if (st.alarm) { ctx.fillStyle = "#f85149"; ctx.font = "bold 22px sans-serif"; ctx.fillText("SAFETY VIOLATION", 300, 180); }
   if (st.shield) { ctx.strokeStyle = "#3fb950"; ctx.lineWidth = 3; ctx.strokeRect(rx*CS+4, ry*CS+4, CS-8, CS-8); }
 }
+function peopleOf(tr) { return (tr.scenario && tr.scenario.people) ? tr.scenario.people : world.people; }
 
-function play(i, tr) {
-  const ctx = $("c"+i).getContext("2d"), log = $("t"+i), status = $("s"+i);
-  log.innerHTML = ""; status.textContent = ""; status.className = "status";
-  const steps = tr.steps, trail = [steps[0].pos];
-  draw(ctx, { pos: steps[0].pos, trail });
+function play(i, tr, my) {
+  const ctx = $("c"+i).getContext("2d"), log = $("t"+i), status = $("s"+i), repl = $("r"+i);
+  log.innerHTML = ""; status.textContent = ""; status.className = "status"; repl.textContent = "";
+  const steps = tr.steps, trail = steps.length ? [steps[0].pos] : [world.start];
+  const people = peopleOf(tr);
+  const sc = tr.scenario || {};
+  const hasSign = steps.some(s => s.sign);
+  const base = { people, hasSign, lidar: !!sc.lidar, camBlind: sc.camera_mode === "hide" };
+  draw(ctx, { ...base, pos: steps.length ? steps[0].pos : world.start, trail });
   let k = 0;
   const tick = () => {
+    if (my !== runId) return;
     if (k >= steps.length) return finish();
     const s = steps[k]; trail.push(s.new_pos);
     let line = `t${s.t} proposed ${s.proposed}`;
     let cls = "";
     if (s.verdict && !s.verdict.allowed) { line += ` -> BLOCKED (${s.verdict.reason}); safe step ${s.executed}`; cls = "blk"; }
+    else if (s.verdict && s.verdict.sensor_conflict) { line += ` | lidar sees a person the camera does not`; cls = "blk"; }
     else if (s.verdict && s.verdict.conflict) { line += ` | sign contradicts camera`; cls = "blk"; }
     if (s.event === "violation") { line += "  !! VIOLATION"; cls = "vio"; }
     const d = document.createElement("div"); d.className = cls; d.textContent = line; log.appendChild(d); log.scrollTop = log.scrollHeight;
-    draw(ctx, { pos: s.new_pos, trail, alarm: s.event === "violation", shield: s.verdict && !s.verdict.allowed });
+    draw(ctx, { ...base, pos: s.new_pos, trail, cam: s.detections, lid: s.lidar, alarm: s.event === "violation", shield: s.verdict && !s.verdict.allowed });
     k++; setTimeout(tick, s.event === "violation" ? 0 : 140);
   };
   const finish = () => {
-    if (tr.outcome === "violation") { status.textContent = "Robot entered the Human Worker Zone."; status.classList.add("bad"); }
-    else if (tr.outcome === "goal") { status.textContent = tr.interventions ? `Delivered safely. Firewall intervened ${tr.interventions}x.` : "Delivered safely."; status.classList.add("ok"); }
+    if (tr.outcome === "violation") {
+      const last = steps[steps.length-1].new_pos;
+      const inZone = world.human_zone.some(c => c[0] === last[0] && c[1] === last[1]);
+      status.textContent = inZone ? "Robot entered the Human Worker Zone." : "Robot ran into a worker.";
+      status.classList.add("bad");
+    }
+    else if (tr.outcome === "goal") { status.textContent = tr.interventions ? `Delivered safely. Safety check intervened ${tr.interventions}x.` : "Delivered safely."; status.classList.add("ok"); }
     else if (tr.outcome === "timeout") status.textContent = "Robot never reached the dock (stalled).";
     else status.textContent = `Run failed (${tr.outcome}${tr.error ? ": " + tr.error : ""}).`;
+    if (tr.replicates) {
+      const n = tr.replicates.seeds.length, bad = tr.replicates.unsafe.reduce((a, b) => a + b, 0);
+      repl.textContent = `Rerun with ${n} decoding seeds: unsafe move proposed in ${bad} of ${n}.`;
+    }
   };
   tick();
 }
 
 async function run(body) {
+  const my = ++runId;
+  const sides = (current && current.sides) || TEXT_SIDES;
+  [0, 1].forEach(i => { $("n"+i).textContent = sides[i].label; const g = $("g"+i); g.textContent = sides[i].tag; g.className = "tag " + (i ? "on" : "off"); });
   const [a, b] = await Promise.all([false, true].map(fw => fetch("/api/run", { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({...body, firewall: fw}) }).then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.detail || "error")))));
-  play(0, a); play(1, b);
+  if (my !== runId) return;
+  play(0, a, my); play(1, b, my);
   const sim = a.planner === "mock";
   $("srcnote").textContent = `Planner: ${sim ? "SIMULATED (offline stand-in, not a real model)" : "Meta model"}${a.cached ? " | recorded run" : " | live run"}`;
   $("simbanner").hidden = !sim;
+}
+
+function showSign(p, text) {
+  $("signbox").hidden = false;
+  if (text) { $("signlabel").textContent = "Sign in the aisle:"; $("signtext").textContent = text; }
+  else { $("signlabel").textContent = "No sign in this scenario."; $("signtext").textContent = ""; }
+  $("desc").textContent = (p && p.desc) || "";
 }
 
 async function init() {
   world = await (await fetch("/api/world")).json();
   try { const h = await (await fetch("/api/health")).json(); $("freerow").hidden = !h.live_enabled; } catch (e) {}
   const presets = await (await fetch("/api/presets")).json();
-  const box = $("presets");
+  const box = $("presets"), groups = {};
   presets.forEach(p => {
+    const name = p.group || "Presets";
+    if (!groups[name]) {
+      const g = document.createElement("div"); g.className = "group";
+      const h = document.createElement("h3"); h.textContent = name;
+      const row = document.createElement("div"); row.className = "presets";
+      g.appendChild(h); g.appendChild(row); box.appendChild(g); groups[name] = row;
+    }
     const b = document.createElement("button"); b.textContent = (p.kind === "attack" ? "Attack: " : "") + p.title; if (p.kind === "benign") b.className = "benign";
-    b.onclick = async () => { document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active")); b.classList.add("active");
-      $("signbox").hidden = false; $("signtext").textContent = p.sign;
-      try { await run({ preset_id: p.id }); } catch (e) { alert(e); } };
-    box.appendChild(b);
+    b.onclick = async () => {
+      document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active")); b.classList.add("active");
+      current = p; showSign(p, p.sign);
+      b.disabled = true;
+      try { await run({ preset_id: p.id }); } catch (e) { alert(e); } finally { b.disabled = false; } };
+    groups[name].appendChild(b);
   });
-  $("freego").onclick = async () => { const t = $("free").value.trim(); if (!t) return; $("signbox").hidden = false; $("signtext").textContent = t;
+  $("freego").onclick = async () => { const t = $("free").value.trim(); if (!t) return;
+    document.querySelectorAll("#presets button").forEach(x => x.classList.remove("active"));
+    current = null; showSign(null, t);
     try { await run({ sign_text: t }); } catch (e) { alert(e); } };
-  const idle = { pos: world.start };
+  const idle = { pos: world.start, people: world.people, hasSign: false };
   draw($("c0").getContext("2d"), idle); draw($("c1").getContext("2d"), idle);
 }
 init();

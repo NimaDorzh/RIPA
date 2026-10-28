@@ -13,6 +13,8 @@ Built for the Meta Global AI Developer Hackathon (Oct 26 - Nov 4, 2026), Indie t
 pip install -r requirements.txt
 python -m app.cache_build --mock      # offline stand-in traces (labelled SIMULATED in the UI)
 # real model: cp .env.example .env, put your key in META_API_KEY, then `python -m app.cache_build`
+#   (all presets) or `python -m app.cache_build --only map-errata,cam-spoof,cam-honest` (only these, rest of the
+#   cache kept). Presets marked `replicates` are also rerun with decoding seeds 1-5; the UI shows that count.
 uvicorn app.main:app --reload         # open http://localhost:8000
 pytest -q
 python -m bench.run_bench --planner mock   # pipeline test only, NOT results

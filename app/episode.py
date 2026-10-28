@@ -78,6 +78,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
         "error": error,
         "planner": planner.name,
         "mode": mode,
+        "scenario": scenario,          # where people really stand / how the camera is spoofed (None = default world)
         "interventions": interventions,
         "unsafe_proposals": unsafe_proposals,
         "invalid_actions": invalid_actions,
