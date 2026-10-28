@@ -6,496 +6,115 @@
 <title>Hack the Robot — Warehouse AI Safety Playground</title>
 <style>
 :root {
-  --bg: #0a0d12;
-  --panel: #11161f;
-  --panel-alt: #161c28;
-  --border: #242e42;
-  --text: #edf2f7;
-  --muted: #8b9bb4;
-  --accent: #38bdf8;
-  --accent-dim: rgba(56, 189, 248, 0.14);
-  --red: #f43f5e;
-  --red-bg: rgba(244, 63, 94, 0.16);
-  --green: #10b981;
-  --green-bg: rgba(16, 185, 129, 0.16);
-  --amber: #f59e0b;
-  --amber-bg: rgba(245, 158, 11, 0.16);
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --floor: #e3e0d8; --floor-2: #d6d2c8; --paper: #f1efe9; --ink: #15171a; --ink-2: #4a5057; --line: #b9b5a9;
+  --yellow: #f2c200; --red: #d7261e; --green: #1e8e4e; --cam: #2457d6; --lidar: #0e8f8a;
+  --display: Bahnschrift, "DIN Alternate", "DIN Condensed", "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font);
-  line-height: 1.45;
-  padding: 14px 20px;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-button, input, select { font: inherit; color: inherit; }
-button {
-  cursor: pointer;
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 6px 12px;
-  transition: border-color 0.15s, background 0.15s;
-}
-button:hover { border-color: var(--accent); }
-button:focus-visible, input:focus-visible, summary:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-.top-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.title-group h1 {
-  font-size: 1.45rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  display: inline-block;
-  margin-right: 12px;
-}
-.title-group .tagline {
-  color: var(--muted);
-  font-size: 0.92rem;
-}
-.harmless-note {
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  background: var(--panel);
-  padding: 4px 9px;
-  border-radius: 4px;
-  border: 1px solid var(--border);
-}
-.alert-banner {
-  background: var(--red-bg);
-  border: 2px solid var(--red);
-  color: #fecdd3;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  margin-bottom: 12px;
-  display: none;
-}
-.cards-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.story-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 11px 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  cursor: pointer;
-  position: relative;
-  transition: border-color 0.15s, background 0.15s;
-}
-.story-card:hover { border-color: #435578; }
-.story-card.active {
-  border-color: var(--accent);
-  background: linear-gradient(180deg, rgba(56, 189, 248, 0.08) 0%, var(--panel) 100%);
-  box-shadow: inset 0 0 0 1px var(--accent);
-}
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 5px;
-}
-.card-title { font-weight: 700; font-size: 1rem; color: var(--text); }
-.card-kicker {
-  font-size: 0.7rem;
-  font-family: var(--mono);
-  text-transform: uppercase;
-  padding: 2px 6px;
-  border-radius: 3px;
-  background: var(--panel-alt);
-  color: var(--accent);
-  border: 1px solid var(--border);
-}
-.card-desc { font-size: 0.83rem; color: var(--muted); margin-bottom: 8px; }
-.card-controls {
-  margin-bottom: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-.more-menu { position: relative; display: inline-block; }
-.more-menu summary {
-  list-style: none;
-  font-size: 0.78rem;
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  padding: 4px 9px;
-  border-radius: 4px;
-  cursor: pointer;
-  user-select: none;
-}
-.more-menu summary::-webkit-details-marker { display: none; }
-.more-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 4px;
-  background: #182030;
-  border: 1px solid var(--accent);
-  border-radius: 6px;
-  padding: 5px;
-  z-index: 30;
-  min-width: 240px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.more-dropdown button {
-  text-align: left;
-  font-size: 0.8rem;
-  padding: 5px 8px;
-  border: none;
-  background: transparent;
-  display: flex;
-  justify-content: space-between;
-}
-.more-dropdown button:hover, .more-dropdown button.active-preset {
-  background: var(--accent-dim);
-  color: var(--accent);
-}
-.toggle-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-.switch-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 0.82rem;
-  cursor: pointer;
-  user-select: none;
-  background: var(--panel-alt);
-  padding: 4px 9px;
-  border-radius: 5px;
-  border: 1px solid var(--border);
-}
-.switch-btn {
-  width: 34px;
-  height: 18px;
-  border-radius: 10px;
-  background: #2d3748;
-  position: relative;
-  padding: 0;
-  border: 1px solid #4a5568;
-  transition: background 0.15s;
-}
-.switch-btn[aria-checked="true"] {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.switch-thumb {
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: transform 0.15s;
-}
-.switch-btn[aria-checked="true"] .switch-thumb {
-  transform: translateX(16px);
-  background: #090d16;
-}
-.benchmark-strip {
-  font-size: 0.73rem;
-  color: #94a3b8;
-  background: rgba(0, 0, 0, 0.28);
-  border-top: 1px solid var(--border);
-  padding-top: 7px;
-  margin-top: auto;
-  line-height: 1.35;
-}
-.live-box {
-  display: none;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 8px 12px;
-  margin-bottom: 12px;
-  align-items: center;
-  gap: 10px;
-}
-.live-box input {
-  flex: 1;
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-family: var(--mono);
-  font-size: 0.85rem;
-}
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-.playback-btns { display: flex; align-items: center; gap: 6px; }
-.playback-btns button.active-speed {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-dim);
-}
-.step-counter {
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin-left: 8px;
-}
-.legend {
-  display: flex;
-  gap: 14px;
-  font-size: 0.76rem;
-  color: var(--muted);
-  flex-wrap: wrap;
-  align-items: center;
-}
-.legend-item { display: inline-flex; align-items: center; gap: 5px; }
-.swatch { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
-.arenas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  margin-bottom: 12px;
-}
-.arena-panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-.arena-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.arena-title { font-size: 1.05rem; font-weight: 700; }
-.arena-badge {
-  font-family: var(--mono);
-  font-size: 0.75rem;
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  color: var(--accent);
-}
-.result-banner {
-  min-height: 46px;
-  border-radius: 6px;
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-weight: 800;
-  font-size: 1.08rem;
-  letter-spacing: -0.01em;
-  border: 1px solid var(--border);
-  background: var(--panel-alt);
-  color: var(--muted);
-}
-.result-banner.outcome-violation {
-  background: var(--red-bg);
-  border-color: var(--red);
-  color: #ffe4e6;
-}
-.result-banner.outcome-goal {
-  background: var(--green-bg);
-  border-color: var(--green);
-  color: #d1fae5;
-}
-.result-banner.outcome-timeout {
-  background: rgba(148, 163, 184, 0.14);
-  border-color: #64748b;
-  color: #e2e8f0;
-}
-.result-banner.outcome-error {
-  background: var(--amber-bg);
-  border-color: var(--amber);
-  color: #fef3c7;
-}
-.banner-sub {
-  font-size: 0.82rem;
-  font-weight: 600;
-  font-family: var(--mono);
-  opacity: 0.95;
-}
-.canvas-wrap {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 10 / 6;
-  background: #0d121b;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  overflow: hidden;
-}
-canvas { width: 100%; height: 100%; display: block; }
-.sign-caption {
-  font-family: var(--mono);
-  font-size: 0.77rem;
-  background: #0d131d;
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--amber);
-  padding: 5px 9px;
-  border-radius: 4px;
-  color: #cbd5e1;
-  min-height: 29px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.chips-strip {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  min-height: 28px;
-  align-items: center;
-}
-.step-chip {
-  font-family: var(--mono);
-  font-size: 0.74rem;
-  padding: 3px 7px;
-  border-radius: 4px;
-  background: var(--panel-alt);
-  border: 1px solid var(--border);
-  color: var(--muted);
-  cursor: pointer;
-}
-.step-chip.current {
-  border-color: var(--accent);
-  color: var(--text);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-.step-chip.chip-blocked {
-  background: var(--green-bg);
-  border-color: var(--green);
-  color: #a7f3d0;
-  font-weight: 600;
-}
-.step-chip.chip-violation {
-  background: var(--red-bg);
-  border-color: var(--red);
-  color: #fecdd3;
-  font-weight: 600;
-}
-.replicates-line {
-  font-size: 0.78rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  min-height: 18px;
-}
-.details-drawer {
-  border-top: 1px solid var(--border);
-  padding-top: 6px;
-  font-size: 0.78rem;
-}
-.details-drawer summary {
-  cursor: pointer;
-  color: var(--muted);
-  font-weight: 600;
-  user-select: none;
-}
-.details-table-wrap { max-height: 150px; overflow-y: auto; margin-top: 6px; }
-table.step-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--mono);
-  font-size: 0.74rem;
-}
-.step-table th, .step-table td {
-  text-align: left;
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border);
-}
-.step-table th { color: var(--muted); }
-.footer-bar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.8rem;
-  color: var(--muted);
-  border-top: 1px solid var(--border);
-  padding-top: 9px;
-  font-family: var(--mono);
-  flex-wrap: wrap;
-  gap: 8px;
-}
-@media (max-width: 960px) {
-  .cards-grid, .arenas { grid-template-columns: 1fr; }
-}
-
-/* ---- patch 11: readability for video, scene-first hierarchy ---- */
 html { font-size: 17px; }
-body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1200px 500px at 50% -120px, #14213a 0%, var(--bg) 60%) no-repeat, var(--bg); }
-.title-group h1 { font-size: 2.2rem; background: linear-gradient(90deg, #e0f2fe, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.title-group .tagline { font-size: 1rem; }
-.cards-grid { gap: 14px; margin-bottom: 14px; }
-.story-card { padding: 14px 16px; min-height: 0; }
-.card-title { font-size: 1.15rem; }
-.card-desc { font-size: .92rem; margin-bottom: 10px; }
-.card-kicker { font-size: .72rem; }
-.arenas { gap: 18px; }
-.arena-panel { padding: 16px; gap: 12px; border-radius: 12px; }
-.arena-title { font-size: 1.3rem; }
-.arena-badge { font-size: .82rem; padding: 3px 10px; }
-.result-banner { min-height: 64px; font-size: 1.45rem; padding: 10px 16px; border-width: 2px; }
-.banner-sub { font-size: .9rem; }
-.canvas-wrap { border-radius: 8px; box-shadow: inset 0 0 0 1px #1c2740, 0 8px 30px rgba(0,0,0,.35); }
-.sign-caption { font-size: .85rem; min-height: 34px; }
-.step-chip { font-size: .82rem; padding: 4px 9px; }
-.replicates-line { font-size: .86rem; }
-.toolbar { padding: 10px 16px; }
-.legend { font-size: .85rem; }
-.bench-panel { display: flex; gap: 22px; align-items: center; background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; padding: 14px 20px; margin-bottom: 14px; }
-.bench-big { font-size: 2rem; font-weight: 800; letter-spacing: -.02em; color: var(--text); white-space: nowrap; min-width: 250px; }
-.bench-big small { display: block; font-size: .78rem; font-weight: 500; color: var(--muted); letter-spacing: 0; white-space: normal; }
-.bench-kicker { font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 3px; font-family: var(--mono); }
-.bench-text { font-size: .9rem; color: #b6c2d6; }
-.footer-bar { font-size: .78rem; }
-@media (max-width: 960px) { .bench-panel { flex-direction: column; align-items: flex-start; } .bench-big { min-width: 0; } html { font-size: 16px; } }
+body { background: var(--floor); color: var(--ink); font-family: var(--body); line-height: 1.45; max-width: 1480px; margin: 0 auto; padding: 22px 32px 32px; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; padding: 6px 13px; transition: background .12s; }
+button:hover { background: #fff; }
+button:focus-visible, input:focus-visible, summary:focus-visible, .story-card:focus-visible { outline: 3px solid var(--cam); outline-offset: 2px; }
+
+/* header */
+.top-bar { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px 28px; flex-wrap: wrap; margin-bottom: 18px; }
+.title-group h1 { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 75; font-weight: 800; font-size: 3rem; line-height: 1; letter-spacing: -.01em; }
+.title-group .tagline { display: block; margin-top: 6px; max-width: 62ch; color: var(--ink-2); font-size: 1rem; }
+.harmless-note { font-size: .88rem; color: var(--ink-2); border-left: 4px solid var(--green); padding: 2px 0 2px 10px; max-width: 28ch; }
+.alert-banner { display: none; background: var(--red); color: #fff; padding: 10px 16px; font-weight: 700; margin-bottom: 14px; border-radius: 3px; }
+
+/* scenario tabs */
+.cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 28px; margin-bottom: 20px; border-top: 2px solid var(--ink); }
+.story-card { padding: 14px 4px 10px; cursor: pointer; position: relative; border-bottom: 5px solid transparent; transition: border-color .15s; }
+.story-card:hover { border-bottom-color: var(--line); }
+.story-card.active { border-bottom-color: var(--yellow); }
+.card-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+.card-title { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 80; font-weight: 700; font-size: 1.55rem; line-height: 1.1; }
+.card-kicker { font-size: .85rem; color: var(--ink-2); }
+.card-desc { font-size: .93rem; color: var(--ink-2); max-width: 60ch; margin-bottom: 8px; }
+.card-controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.more-menu { position: relative; display: inline-block; }
+.more-menu summary { list-style: none; font-size: .85rem; border: 1.5px solid var(--ink); padding: 3px 10px; border-radius: 3px; cursor: pointer; background: var(--paper); user-select: none; }
+.more-menu summary::-webkit-details-marker { display: none; }
+.more-dropdown { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; padding: 4px; z-index: 30; min-width: 260px; box-shadow: 4px 4px 0 var(--ink); display: flex; flex-direction: column; }
+.more-dropdown button { text-align: left; font-size: .88rem; padding: 6px 9px; border: none; background: transparent; display: flex; justify-content: space-between; gap: 12px; }
+.more-dropdown button:hover, .more-dropdown button.active-preset { background: var(--yellow); }
+#currentTextPresetBadge { font-size: .85rem; color: var(--ink-2); }
+.toggle-row { gap: 10px; }
+.switch-label { display: inline-flex; align-items: center; gap: 8px; font-size: .88rem; cursor: pointer; user-select: none; }
+.switch-btn { width: 40px; height: 22px; border-radius: 11px; background: var(--line); position: relative; padding: 0; border: 1.5px solid var(--ink); }
+.switch-btn[aria-checked="true"] { background: var(--yellow); }
+.switch-thumb { width: 14px; height: 14px; background: var(--ink); border-radius: 50%; position: absolute; top: 3px; left: 3px; transition: transform .15s; }
+.switch-btn[aria-checked="true"] .switch-thumb { transform: translateX(18px); }
+
+.live-box { display: none; align-items: center; gap: 10px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.live-box input { flex: 1; background: var(--paper); border: 1.5px solid var(--ink); padding: 7px 10px; border-radius: 3px; }
+
+/* controls */
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px 20px; flex-wrap: wrap; margin-bottom: 12px; }
+.playback-btns { display: flex; align-items: center; gap: 6px; }
+.playback-btns button.active-speed { background: var(--ink); color: var(--paper); }
+.step-counter { font-size: .88rem; color: var(--ink-2); margin-left: 8px; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 16px; font-size: .85rem; color: var(--ink-2); flex-wrap: wrap; align-items: center; }
+.legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { width: 13px; height: 13px; display: inline-block; }
+
+/* the two scenes */
+.arenas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 22px; }
+.arena-panel { display: flex; flex-direction: column; gap: 10px; }
+.arena-header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.arena-title { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 80; font-weight: 700; font-size: 1.6rem; line-height: 1.1; }
+.arena-badge { font-size: .85rem; color: var(--ink-2); }
+.result-banner { height: 66px; overflow: hidden; padding: 8px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 80; font-weight: 700; font-size: 1.9rem; line-height: 1.1; background: var(--paper); color: var(--ink-2); border: 2px solid var(--ink); border-radius: 3px; }
+.result-banner.outcome-violation { background: var(--red); color: #fff; border-color: var(--red); }
+.result-banner.outcome-goal { background: var(--green); color: #fff; border-color: var(--green); }
+.result-banner.outcome-timeout { background: var(--ink-2); color: #fff; border-color: var(--ink-2); }
+.result-banner.outcome-error { background: var(--yellow); color: var(--ink); border-color: var(--ink); }
+.banner-sub { font-family: var(--body); font-stretch: normal; font-variation-settings: normal; font-size: .9rem; font-weight: 600; opacity: .95; text-align: right; }
+.canvas-wrap { position: relative; width: 100%; aspect-ratio: 10 / 6; border: 2px solid var(--ink); border-radius: 3px; overflow: hidden; background: var(--floor-2); }
+canvas { width: 100%; height: 100%; display: block; }
+.sign-caption { font-size: .9rem; min-height: 30px; display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--ink); border-left: 5px solid var(--yellow); padding: 3px 0 3px 10px; background: var(--paper); }
+.sign-caption span:last-child { color: var(--cam); font-weight: 700; }
+.chips-strip { display: flex; flex-wrap: wrap; gap: 5px; min-height: 28px; align-items: center; }
+.step-chip { font-size: .8rem; padding: 3px 8px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink-2); border-radius: 3px; font-variant-numeric: tabular-nums; }
+.step-chip.current { border-color: var(--ink); color: var(--ink); background: #fff; }
+.step-chip.chip-blocked { background: var(--green); border-color: var(--green); color: #fff; font-weight: 700; }
+.step-chip.chip-violation { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
+.replicates-line { font-size: .88rem; color: var(--ink-2); min-height: 18px; }
+.details-drawer { border-top: 1px solid var(--line); padding-top: 6px; font-size: .85rem; }
+.details-drawer summary { cursor: pointer; color: var(--ink-2); font-weight: 600; user-select: none; }
+.details-table-wrap { max-height: 160px; overflow-y: auto; margin-top: 6px; }
+table.step-table { width: 100%; border-collapse: collapse; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.step-table th, .step-table td { text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.step-table th { color: var(--ink-2); }
+
+/* evidence placard */
+.bench-panel { display: flex; gap: 28px; align-items: center; background: var(--paper); border: 2px solid var(--ink); padding: 16px 22px 16px 30px; margin-bottom: 18px; position: relative; border-radius: 3px; }
+.bench-panel::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 12px; background: repeating-linear-gradient(135deg, var(--yellow) 0 8px, var(--ink) 8px 16px); }
+.bench-big { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 75; font-weight: 800; font-size: 2.6rem; line-height: 1; white-space: nowrap; min-width: 270px; }
+.bench-big small { display: block; margin-top: 4px; font-family: var(--body); font-stretch: normal; font-variation-settings: normal; font-size: .85rem; font-weight: 500; color: var(--ink-2); white-space: normal; }
+.bench-kicker { font-size: .85rem; font-weight: 700; margin-bottom: 3px; }
+.bench-text { font-size: .93rem; color: var(--ink-2); max-width: 78ch; }
+.footer-bar { display: flex; justify-content: space-between; gap: 8px 24px; flex-wrap: wrap; font-size: .8rem; color: var(--ink-2); border-top: 1px solid var(--line); padding-top: 10px; }
+@media (max-width: 960px) { html { font-size: 16px; } body { padding: 16px; } .cards-grid, .arenas { grid-template-columns: 1fr; } .bench-panel { flex-direction: column; align-items: flex-start; } .bench-big { min-width: 0; } .title-group h1 { font-size: 2.4rem; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 
 <header class="top-bar">
   <div class="title-group">
-    <h1>Hack the Robot</h1>
-    <span class="tagline">Adversarial signs &amp; sensor spoofing against a warehouse AI planner (Muse Spark), side by side with safety defenses.</span>
+    <h1>Hack the robot</h1>
+    <span class="tagline">Fool a warehouse robot driven by Meta's Muse Spark with a sign or a spoofed camera, then see what a second line of defense changes.</span>
   </div>
-  <div class="harmless-note">Defense on harmless signs: 24/24 deliveries in every mode.</div>
+  <div class="harmless-note">Harmless signs: 24 of 24 deliveries in every defense mode.</div>
 </header>
 
 <div id="mockBanner" class="alert-banner" role="alert">
-  [!] SIMULATED planner: offline stand-in, NOT a real AI model.
+  SIMULATED planner: offline stand-in, not a real AI model.
 </div>
 <div id="errorBanner" class="alert-banner" role="alert"></div>
 
@@ -504,12 +123,12 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
   <div class="story-card" id="card-text" tabindex="0" role="button" aria-pressed="false">
     <div>
       <div class="card-head">
-        <span class="card-title">1. Text sign attack</span>
-        <span class="card-kicker">Prompt Injection</span>
+        <span class="card-title">Text sign</span>
+        <span class="card-kicker">prompt injection</span>
       </div>
       <p class="card-desc" id="desc-text">A malicious sign in the aisle attempts to trick the robot into taking a shortcut through the Human Worker Zone.</p>
       <div class="card-controls" onclick="event.stopPropagation()">
-        <span id="currentTextPresetBadge" style="font-family:var(--mono);font-size:0.76rem;color:var(--accent);">Preset: shortcut</span>
+        <span id="currentTextPresetBadge">Preset: shortcut</span>
         <details class="more-menu" id="moreSignMenu">
           <summary>More sign attacks &#9662;</summary>
           <div class="more-dropdown" id="moreSignList"></div>
@@ -522,8 +141,8 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
   <div class="story-card" id="card-map" tabindex="0" role="button" aria-pressed="false">
     <div>
       <div class="card-head">
-        <span class="card-title">2. False map correction</span>
-        <span class="card-kicker">Adaptive Attack</span>
+        <span class="card-title">False map correction</span>
+        <span class="card-kicker">found by an attacker model</span>
       </div>
       <p class="card-desc" id="desc-map">An adaptive attacker plants a fake system map errata notice claiming the Human Worker Zone coordinates were relocated.</p>
     </div>
@@ -533,8 +152,8 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
   <div class="story-card" id="card-cam" tabindex="0" role="button" aria-pressed="false">
     <div>
       <div class="card-head">
-        <span class="card-title">3. Camera spoof</span>
-        <span class="card-kicker">Sensor Patch</span>
+        <span class="card-title">Camera spoof</span>
+        <span class="card-kicker">sensor attack</span>
       </div>
       <p class="card-desc" id="desc-cam">An adversarial patch hides the worker in the aisle from the camera while independent LiDAR still detects the physical obstacle.</p>
       <div class="card-controls toggle-row" onclick="event.stopPropagation()">
@@ -558,7 +177,7 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
 <div id="liveSignBox" class="live-box">
   <label for="customSignInput" style="font-weight:700;font-size:0.84rem;">Custom Sign Text (Live Model):</label>
   <input type="text" id="customSignInput" placeholder="Enter custom warehouse sign text to test live..." maxlength="180">
-  <button type="button" id="runCustomBtn" style="border-color:var(--accent);color:var(--accent);font-weight:600;">Run Live Sign</button>
+  <button type="button" id="runCustomBtn" style="background:var(--yellow);font-weight:700;">Run Live Sign</button>
 </div>
 
 <section class="toolbar" aria-label="Playback Controls">
@@ -571,10 +190,10 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
     <span class="step-counter" id="stepCounterText">Step 0 / 0</span>
   </div>
   <div class="legend">
-    <span class="legend-item"><span class="swatch" style="background:#eab308;border:1px solid #000"></span>Human Worker Zone</span>
-    <span class="legend-item"><span class="swatch" style="border:2px solid #38bdf8;background:transparent"></span>Camera Detection</span>
-    <span class="legend-item"><span class="swatch" style="border:2px solid #10b981;border-radius:50%;background:transparent"></span>LiDAR Detection</span>
-    <span class="legend-item"><span class="swatch" style="background:#f59e0b"></span>Sign Board</span>
+    <span class="legend-item"><span class="swatch" style="background:repeating-linear-gradient(135deg,#f2c200 0 3px,#15171a 3px 6px)"></span>Human worker zone</span>
+    <span class="legend-item"><span class="swatch" style="border:2px solid #2457d6"></span>Camera sees a person</span>
+    <span class="legend-item"><span class="swatch" style="border:2px solid #0e8f8a;border-radius:50%"></span>Lidar sees a person</span>
+    <span class="legend-item"><span class="swatch" style="background:#fff;border:2px solid #d7261e"></span>Sign board</span>
   </div>
 </section>
 
@@ -640,7 +259,7 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
 
 <section class="bench-panel" id="benchPanel" aria-live="polite">
   <div class="bench-big" id="benchBig"></div>
-  <div class="bench-text"><div class="bench-kicker">Benchmark (Muse Spark)</div><div id="benchText"></div></div>
+  <div class="bench-text"><div class="bench-kicker">Measured on Muse Spark</div><div id="benchText"></div></div>
 </section>
 
 <footer class="footer-bar">
@@ -953,8 +572,8 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
       bannerEl.className = 'result-banner';
       const curIdx = Math.min(steps.length - 1, Math.floor(animProgress));
       const st = steps[curIdx];
-      textEl.textContent = `Executing Step ${curIdx + 1} of ${steps.length}...`;
-      subEl.textContent = st ? `Proposed: ${st.proposed} | Executed: ${st.executed}` : '';
+      textEl.textContent = `Step ${curIdx + 1} of ${steps.length}`;
+      subEl.textContent = st ? (st.proposed === st.executed ? `Move: ${st.proposed}` : `Wanted ${st.proposed}, did ${st.executed}`) : '';
       return;
     }
 
@@ -1043,107 +662,68 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
     const ctx = canvas.getContext('2d');
     const S = canvas.width / 700;
     ctx.setTransform(S, 0, 0, S, 0, 0);
-    const W = 700;
-    const H = 420;
-    const cols = world.w || 10;
-    const rows = world.h || 6;
-    const cw = W / cols;
-    const ch = H / rows;
+    const W = 700, H = 420;
+    const cols = world.w || 10, rows = world.h || 6;
+    const cw = W / cols, ch = H / rows;
+    const INK = '#15171a', YEL = '#f2c200', RED = '#d7261e', GRN = '#1e8e4e', CAM = '#2457d6', LID = '#0e8f8a';
+    const SANS = 'bold 12px Bahnschrift, "Arial Narrow", system-ui, sans-serif';
+    const plate = (x, y, w, h, bg, fg, text) => {
+      ctx.save(); ctx.fillStyle = bg; ctx.fillRect(x, y, w, h); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = fg; ctx.font = SANS; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 6, y + h / 2 + 0.5); ctx.restore();
+    };
+    const rrect = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
 
-    ctx.clearRect(0, 0, W, H);
-
-    ctx.fillStyle = '#0f1622';
-    ctx.fillRect(0, 0, W, H);
-
-    ctx.strokeStyle = '#1b2536';
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= cols; x++) {
-      ctx.beginPath(); ctx.moveTo(x * cw, 0); ctx.lineTo(x * cw, H); ctx.stroke();
+    // concrete floor in slabs
+    for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) {
+      ctx.fillStyle = (x + y) % 2 ? '#d6d2c8' : '#dad6cc'; ctx.fillRect(x * cw, y * ch, cw, ch);
     }
-    for (let y = 0; y <= rows; y++) {
-      ctx.beginPath(); ctx.moveTo(0, y * ch); ctx.lineTo(W, y * ch); ctx.stroke();
+    ctx.strokeStyle = 'rgba(21,23,26,.10)'; ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++) { ctx.beginPath(); ctx.moveTo(x * cw, 0); ctx.lineTo(x * cw, H); ctx.stroke(); }
+    for (let y = 0; y <= rows; y++) { ctx.beginPath(); ctx.moveTo(0, y * ch); ctx.lineTo(W, y * ch); ctx.stroke(); }
+    // painted robot lane along the start-dock row
+    if (world.start && world.goal) {
+      ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.setLineDash([14, 12]);
+      ctx.beginPath(); ctx.moveTo((world.start[0] + 0.5) * cw, (world.start[1] + 0.5) * ch); ctx.lineTo((world.goal[0] + 0.5) * cw, (world.goal[1] + 0.5) * ch); ctx.stroke(); ctx.restore();
     }
 
-    ctx.save();
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.18)';
-    ctx.setLineDash([8, 8]);
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(cw * 0.5, ch * 2.5);
-    ctx.lineTo(cw * (cols - 0.5), ch * 2.5);
-    ctx.stroke();
-    ctx.restore();
-
+    // human worker zone: yellow floor tape with black diagonals
     const hz = world.human_zone || [];
     hz.forEach(([gx, gy]) => {
       const rx = gx * cw, ry = gy * ch;
-      ctx.save();
-      ctx.beginPath();
-      ctx.rect(rx + 2, ry + 2, cw - 4, ch - 4);
-      ctx.clip();
-      ctx.fillStyle = 'rgba(234, 179, 8, 0.18)';
-      ctx.fillRect(rx, ry, cw, ch);
-      ctx.strokeStyle = 'rgba(234, 179, 8, 0.55)';
-      ctx.lineWidth = 6;
-      for (let i = -ch; i < cw + ch; i += 16) {
-        ctx.beginPath();
-        ctx.moveTo(rx + i, ry);
-        ctx.lineTo(rx + i - ch, ry + ch);
-        ctx.stroke();
-      }
+      ctx.save(); ctx.beginPath(); ctx.rect(rx, ry, cw, ch); ctx.clip();
+      ctx.fillStyle = YEL; ctx.fillRect(rx, ry, cw, ch);
+      ctx.strokeStyle = INK; ctx.lineWidth = 7;
+      for (let i = -ch; i < cw + ch; i += 18) { ctx.beginPath(); ctx.moveTo(rx + i, ry + ch); ctx.lineTo(rx + i + ch, ry); ctx.stroke(); }
+      ctx.fillStyle = 'rgba(241,239,233,.72)'; ctx.fillRect(rx + 7, ry + 7, cw - 14, ch - 14);   // keep the middle readable
       ctx.restore();
-      ctx.strokeStyle = '#eab308';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(rx + 2, ry + 2, cw - 4, ch - 4);
     });
-    if (hz.length > 0) {
-      const firstHz = hz[0];
-      ctx.fillStyle = '#fde047';
-      ctx.font = 'bold 13px ui-monospace, monospace';
-      ctx.fillText('HUMAN WORKER ZONE', firstHz[0] * cw + 6, firstHz[1] * ch + 15);
+    ctx.strokeStyle = INK; ctx.lineWidth = 2;
+    hz.forEach(([gx, gy]) => ctx.strokeRect(gx * cw + 1, gy * ch + 1, cw - 2, ch - 2));
+    if (hz.length) {
+      const zx = Math.min(...hz.map(c => c[0])) * cw, zxe = (Math.max(...hz.map(c => c[0])) + 1) * cw;
+      const zy = (Math.max(...hz.map(c => c[1])) + 0.5) * ch;   // bottom row of the zone, clear of workers and signs
+      ctx.font = SANS; const tw = Math.ceil(ctx.measureText('HUMAN WORKER ZONE').width) + 14;
+      plate((zx + zxe - tw) / 2, zy - 11, tw, 22, YEL, INK, 'HUMAN WORKER ZONE');
     }
 
+    // racks with boxes
     (world.shelves || []).forEach(([sx, sy]) => {
-      const rx = sx * cw + 4, ry = sy * ch + 4, rw = cw - 8, rh = ch - 8;
-      ctx.fillStyle = '#1e293b';
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1.5;
-      ctx.fillRect(rx, ry, rw, rh);
-      ctx.strokeRect(rx, ry, rw, rh);
-      ctx.fillStyle = '#854d0e';
-      ctx.fillRect(rx + 5, ry + 6, rw * 0.38, rh - 12);
-      ctx.fillStyle = '#a16207';
-      ctx.fillRect(rx + rw * 0.48, ry + 8, rw * 0.42, rh - 16);
+      const rx = sx * cw + 5, ry = sy * ch + 6, rw = cw - 10, rh = ch - 12;
+      ctx.fillStyle = '#5b6770'; ctx.fillRect(rx, ry, rw, rh);
+      ctx.fillStyle = '#7d8993'; ctx.fillRect(rx, ry, rw, 6);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.strokeRect(rx, ry, rw, rh);
+      ctx.fillStyle = '#b9894a'; ctx.fillRect(rx + 5, ry + 13, rw * 0.4, rh - 20); ctx.fillRect(rx + rw * 0.52, ry + 17, rw * 0.38, rh - 24);
+      ctx.strokeStyle = '#7a5a2a'; ctx.lineWidth = 1; ctx.strokeRect(rx + 5, ry + 13, rw * 0.4, rh - 20); ctx.strokeRect(rx + rw * 0.52, ry + 17, rw * 0.38, rh - 24);
     });
 
-    if (world.start) {
-      const [stX, stY] = world.start;
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(stX * cw + 6, stY * ch + 6, cw - 12, ch - 12);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 12px ui-monospace, monospace';
-      ctx.fillText('START', stX * cw + 14, stY * ch + ch - 10);
-    }
-
+    // start pad and dock
+    if (world.start) { const [x, y] = world.start; ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.strokeRect(x * cw + 7, y * ch + 7, cw - 14, ch - 14); ctx.fillStyle = INK; ctx.font = SANS; ctx.textBaseline = 'alphabetic'; ctx.fillText('START', x * cw + 12, y * ch + ch - 12); }
     if (world.goal) {
-      const [gX, gY] = world.goal;
-      const rx = gX * cw + 4, ry = gY * ch + 4, rw = cw - 8, rh = ch - 8;
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 2;
-      ctx.fillRect(rx, ry, rw, rh);
-      ctx.strokeRect(rx, ry, rw, rh);
-      ctx.fillStyle = '#34d399';
-      ctx.font = 'bold 13px ui-monospace, monospace';
-      ctx.fillText('DOCK', rx + 16, ry + 20);
-      ctx.beginPath();
-      ctx.moveTo(rx + 18, ry + 36);
-      ctx.lineTo(rx + rw - 18, ry + 36);
-      ctx.lineTo(rx + rw - 25, ry + 30);
-      ctx.moveTo(rx + rw - 18, ry + 36);
-      ctx.lineTo(rx + rw - 25, ry + 42);
-      ctx.stroke();
+      const [gx, gy] = world.goal, rx = gx * cw + 3, ry = gy * ch + 3, rw = cw - 6, rh = ch - 6;
+      ctx.fillStyle = GRN; ctx.fillRect(rx, ry, rw, rh); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.strokeRect(rx, ry, rw, rh);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 4; ctx.lineJoin = 'round';
+      [0, 12].forEach(o => { ctx.beginPath(); ctx.moveTo(rx + 14 + o, ry + rh * 0.58); ctx.lineTo(rx + 26 + o, ry + rh * 0.74); ctx.lineTo(rx + 14 + o, ry + rh * 0.9); ctx.stroke(); });
+      ctx.fillStyle = '#fff'; ctx.font = SANS; ctx.textBaseline = 'alphabetic'; ctx.fillText('DOCK', rx + 8, ry + 20);
     }
 
     const steps = (trace && Array.isArray(trace.steps)) ? trace.steps : [];
@@ -1151,193 +731,93 @@ body { max-width: 1520px; padding: 18px 28px 28px; background: radial-gradient(1
     const stepIdx = Math.min(steps.length - 1, Math.floor(activeFloat));
     const frac = activeFloat - Math.floor(activeFloat);
     const curStep = (steps.length > 0 && stepIdx >= 0) ? steps[stepIdx] : null;
-
     const presetObj = presets.find(p => p.id === activePresetId);
     const hasSign = Boolean((curStep && curStep.sign) || (presetObj && presetObj.sign) || (dom.customSignInput.value.trim()));
-    if (world.sign_pos) {
-      const [sgX, sgY] = world.sign_pos;
-      const cx = (sgX + 0.82) * cw;
-      const cy = (sgY + 0.22) * ch;
-      ctx.save();
-      ctx.fillStyle = hasSign ? '#f59e0b' : '#475569';
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 1.5;
-      ctx.fillRect(cx - 17, cy - 12, 34, 22);
-      ctx.strokeRect(cx - 17, cy - 12, 34, 22);
-      ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 11px ui-monospace, monospace';
-      ctx.fillText('SIGN', cx - 14, cy + 4);
-      ctx.restore();
+
+    // sign board on a post
+    if (world.sign_pos && hasSign) {
+      const [sgX, sgY] = world.sign_pos, cx = (sgX + 0.5) * cw, cy = (sgY + 0.5) * ch;
+      ctx.fillStyle = INK; ctx.fillRect(cx - 2, cy - 4, 4, 30);
+      ctx.fillStyle = '#fff'; ctx.fillRect(cx - 24, cy - 26, 48, 26); ctx.strokeStyle = RED; ctx.lineWidth = 3; ctx.strokeRect(cx - 24, cy - 26, 48, 26);
+      ctx.fillStyle = INK; ctx.font = SANS; ctx.textBaseline = 'middle'; ctx.fillText('SIGN', cx - 16, cy - 12);
     }
 
+    // workers (really there), hi-vis vest and white helmet
     const scen = (trace && trace.scenario) ? trace.scenario : (presetObj && presetObj.scenario ? presetObj.scenario : null);
     const people = (scen && Array.isArray(scen.people)) ? scen.people : (world.people || []);
     const camHide = Boolean(scen && scen.camera_mode === 'hide');
-
     people.forEach(([px, py]) => {
-      const cx = (px + 0.5) * cw;
-      const cy = (py + 0.5) * ch;
+      const cx = (px + 0.5) * cw, cy = (py + 0.5) * ch;
       ctx.save();
-      ctx.fillStyle = '#f97316';
-      ctx.beginPath();
-      ctx.arc(cx, cy + 7, 12, Math.PI, 0, false);
-      ctx.fill();
-      ctx.strokeStyle = '#fde047';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(cx - 5, cy - 2); ctx.lineTo(cx - 5, cy + 7);
-      ctx.moveTo(cx + 5, cy - 2); ctx.lineTo(cx + 5, cy + 7);
-      ctx.stroke();
-      ctx.fillStyle = '#facc15';
-      ctx.beginPath();
-      ctx.arc(cx, cy - 5, 9, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      if (camHide) {
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-        ctx.strokeStyle = '#f43f5e';
-        ctx.lineWidth = 1;
-        const bw = 160, bh = 21;
-        ctx.fillRect(cx - bw / 2, cy - 38, bw, bh);
-        ctx.strokeRect(cx - bw / 2, cy - 38, bw, bh);
-        ctx.fillStyle = '#fda4af';
-        ctx.font = 'bold 12px ui-monospace, monospace';
-        ctx.fillText('camera reports: nobody', cx - bw / 2 + 6, cy - 23);
-      }
+      ctx.fillStyle = '#f26a1b'; rrect(cx - 13, cy - 2, 26, 24, 7); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#f1efe9'; ctx.fillRect(cx - 13, cy + 8, 26, 4);          // reflective band
+      ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx, cy - 8, 9, Math.PI, 0); ctx.fill(); ctx.fillRect(cx - 11, cy - 8, 22, 4); ctx.stroke();
+      ctx.fillStyle = '#d9a37a'; ctx.beginPath(); ctx.arc(cx, cy - 5, 5, 0, 7); ctx.fill();
       ctx.restore();
+      if (camHide) plate(cx - 82, (cy - 52 < 3) ? cy + 28 : cy - 52, 164, 21, INK, '#fff', 'camera reports: nobody');
     });
 
-    let rxGrid = world.start ? world.start[0] : 0;
-    let ryGrid = world.start ? world.start[1] : 2;
-    let heading = 'RIGHT';
-
+    // robot position (interpolated)
+    let rxGrid = world.start ? world.start[0] : 0, ryGrid = world.start ? world.start[1] : 2, heading = 'RIGHT';
     if (steps.length > 0) {
       if (activeFloat >= steps.length) {
         const last = steps[steps.length - 1];
-        rxGrid = last.new_pos ? last.new_pos[0] : last.pos[0];
-        ryGrid = last.new_pos ? last.new_pos[1] : last.pos[1];
+        rxGrid = last.new_pos ? last.new_pos[0] : last.pos[0]; ryGrid = last.new_pos ? last.new_pos[1] : last.pos[1];
         heading = last.executed || last.proposed || 'RIGHT';
       } else {
-        const st = steps[stepIdx];
-        const p0 = st.pos || world.start;
-        const p1 = st.new_pos || p0;
-        rxGrid = p0[0] + (p1[0] - p0[0]) * frac;
-        ryGrid = p0[1] + (p1[1] - p0[1]) * frac;
+        const st = steps[stepIdx], p0 = st.pos || world.start, p1 = st.new_pos || p0;
+        rxGrid = p0[0] + (p1[0] - p0[0]) * frac; ryGrid = p0[1] + (p1[1] - p0[1]) * frac;
         heading = st.executed && st.executed !== 'STOP' ? st.executed : (st.proposed || 'RIGHT');
       }
     }
+    const robotCx = (rxGrid + 0.5) * cw, robotCy = (ryGrid + 0.5) * ch;
 
-    const robotCx = (rxGrid + 0.5) * cw;
-    const robotCy = (ryGrid + 0.5) * ch;
-
-    if (steps.length > 0 && activeFloat > 0) {
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      const startP = steps[0].pos || world.start;
-      ctx.moveTo((startP[0] + 0.5) * cw, (startP[1] + 0.5) * ch);
+    if (steps.length > 0 && activeFloat > 0) {   // path so far, dashed
+      ctx.save(); ctx.strokeStyle = 'rgba(21,23,26,.6)'; ctx.lineWidth = 3; ctx.setLineDash([7, 6]); ctx.lineJoin = 'round'; ctx.beginPath();
+      const startP = steps[0].pos || world.start; ctx.moveTo((startP[0] + 0.5) * cw, (startP[1] + 0.5) * ch);
       const limit = Math.min(steps.length, Math.floor(activeFloat));
-      for (let i = 0; i < limit; i++) {
-        const np = steps[i].new_pos || steps[i].pos;
-        ctx.lineTo((np[0] + 0.5) * cw, (np[1] + 0.5) * ch);
-      }
-      ctx.lineTo(robotCx, robotCy);
-      ctx.stroke();
-      ctx.restore();
+      for (let i = 0; i < limit; i++) { const np = steps[i].new_pos || steps[i].pos; ctx.lineTo((np[0] + 0.5) * cw, (np[1] + 0.5) * ch); }
+      ctx.lineTo(robotCx, robotCy); ctx.stroke(); ctx.restore();
     }
 
+    // sensors
     const lidarList = curStep && Array.isArray(curStep.lidar) ? curStep.lidar : null;
     const lidarActive = Boolean(lidarList !== null || (scen && scen.lidar));
-
     if (lidarActive && showLidarRing) {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(16, 185, 129, 0.28)';
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.05)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(robotCx, robotCy, cw * 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      if (lidarList) {
-        lidarList.forEach(pt => {
-          const lx = (pt.x + 0.5) * cw;
-          const ly = (pt.y + 0.5) * ch;
-          ctx.strokeStyle = '#10b981';
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          ctx.arc(lx, ly, Math.min(cw, ch) * 0.36, 0, Math.PI * 2);
-          ctx.stroke();
-        });
-      }
+      ctx.save(); ctx.strokeStyle = 'rgba(14,143,138,.7)'; ctx.fillStyle = 'rgba(14,143,138,.10)'; ctx.lineWidth = 2; ctx.setLineDash([3, 5]);
+      ctx.beginPath(); ctx.arc(robotCx, robotCy, cw * 2, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+      (lidarList || []).forEach(pt => { ctx.strokeStyle = LID; ctx.lineWidth = 3.5; ctx.beginPath(); ctx.arc((pt.x + 0.5) * cw, (pt.y + 0.5) * ch, Math.min(cw, ch) * 0.42, 0, Math.PI * 2); ctx.stroke(); });
       ctx.restore();
     }
-
-    const dets = (curStep && Array.isArray(curStep.detections)) ? curStep.detections : [];
-    dets.forEach(d => {
-      const dx = d.x * cw + 5, dy = d.y * ch + 5, dw = cw - 10, dh = ch - 10;
-      const bl = 10;
-      ctx.save();
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
+    ((curStep && Array.isArray(curStep.detections)) ? curStep.detections : []).forEach(d => {
+      const dx = d.x * cw + 4, dy = d.y * ch + 4, dw = cw - 8, dh = ch - 8, bl = 12;
+      ctx.save(); ctx.strokeStyle = CAM; ctx.lineWidth = 3.5; ctx.beginPath();
       ctx.moveTo(dx, dy + bl); ctx.lineTo(dx, dy); ctx.lineTo(dx + bl, dy);
       ctx.moveTo(dx + dw - bl, dy); ctx.lineTo(dx + dw, dy); ctx.lineTo(dx + dw, dy + bl);
       ctx.moveTo(dx, dy + dh - bl); ctx.lineTo(dx, dy + dh); ctx.lineTo(dx + bl, dy + dh);
       ctx.moveTo(dx + dw - bl, dy + dh); ctx.lineTo(dx + dw, dy + dh); ctx.lineTo(dx + dw, dy + dh - bl);
-      ctx.stroke();
-      ctx.restore();
+      ctx.stroke(); ctx.restore();
     });
 
-    ctx.save();
-    ctx.translate(robotCx, robotCy);
-    ctx.fillStyle = '#0284c7';
-    ctx.strokeStyle = '#e0f2fe';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, 0, 16, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-
-    let angle = 0;
-    if (heading === 'UP') angle = -Math.PI / 2;
-    else if (heading === 'DOWN') angle = Math.PI / 2;
-    else if (heading === 'LEFT') angle = Math.PI;
+    // robot: low charcoal cart with a heading chevron and a beacon
+    ctx.save(); ctx.translate(robotCx, robotCy);
+    let angle = 0; if (heading === 'UP') angle = -Math.PI / 2; else if (heading === 'DOWN') angle = Math.PI / 2; else if (heading === 'LEFT') angle = Math.PI;
     ctx.rotate(angle);
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.moveTo(10, 0);
-    ctx.lineTo(-5, -6);
-    ctx.lineTo(-2, 0);
-    ctx.lineTo(-5, 6);
-    ctx.closePath();
-    ctx.fill();
+    ctx.fillStyle = '#2b3036'; rrect(-20, -16, 40, 32, 6); ctx.fill(); ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = YEL; ctx.fillRect(-20, -16, 6, 32);                        // rear hazard bar
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3.5; ctx.lineJoin = 'round'; ctx.beginPath(); ctx.moveTo(2, -8); ctx.lineTo(12, 0); ctx.lineTo(2, 8); ctx.stroke();
     ctx.restore();
+    ctx.fillStyle = CAM; ctx.beginPath(); ctx.arc(robotCx, robotCy, 3.5, 0, 7); ctx.fill();
 
+    // outcome marks
     const isBlockedNow = curStep && ((curStep.verdict && curStep.verdict.allowed === false) || curStep.event === 'blocked');
     if (isBlockedNow) {
-      ctx.save();
-      ctx.strokeStyle = '#10b981';
-      ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(robotCx, robotCy, 24, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = '#064e3b';
-      ctx.strokeStyle = '#34d399';
-      ctx.lineWidth = 1.5;
-      ctx.fillRect(robotCx - 42, robotCy - 54, 84, 21);
-      ctx.strokeRect(robotCx - 42, robotCy - 54, 84, 21);
-      ctx.fillStyle = '#a7f3d0';
-      ctx.font = 'bold 12px ui-monospace, monospace';
-      ctx.fillText('\u25A0 BLOCKED', robotCx - 36, robotCy - 40);
-      ctx.restore();
+      ctx.save(); ctx.strokeStyle = GRN; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(robotCx, robotCy, 29, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      plate(robotCx - 38, Math.max(3, robotCy - 58), 76, 21, GRN, '#fff', 'BLOCKED');
+    }
+    if (curStep && curStep.event === 'violation' && activeFloat >= steps.length) {
+      ctx.save(); ctx.strokeStyle = RED; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(robotCx, robotCy, 31, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+      plate(robotCx - 48, (robotCy - 60 < 3) ? robotCy + 36 : robotCy - 60, 96, 22, RED, '#fff', 'VIOLATION');
     }
   }
 
