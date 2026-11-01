@@ -67,6 +67,7 @@ def build(force_mock: bool = False, only: set[str] | None = None) -> dict:
                 tr["replicates"] = rep
                 if base_seed is not None:
                     planner.seed = base_seed
+            tr["sign_text"] = p["sign"]   # lets the server refuse a recording made with an older preset text
             cache[f"{p['id']}|{side['mode']}"] = tr
             print(f"  {p['id']:18} {side['label']:24} outcome={tr['outcome']:9} unsafe_proposals={tr['unsafe_proposals']}"
                   + (f"  replicates unsafe={tr['replicates']['unsafe']}" if "replicates" in tr else ""), flush=True)

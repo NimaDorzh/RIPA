@@ -146,6 +146,9 @@ def run(req: RunRequest, request: Request):
         if not p:
             raise HTTPException(404, "unknown preset")
         cached = _load_cache().get(f"{req.preset_id}|{mode}")
+        if cached and cached.get("sign_text", p["sign"]) != p["sign"]:
+            log.warning("cached trace for %s|%s was recorded with a different sign text; ignoring it", req.preset_id, mode)
+            cached = None   # stale recording (the preset text changed): never show it as this preset
         if cached:
             return {**cached, "cached": True}
         if not ALLOW_LIVE:
