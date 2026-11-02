@@ -204,22 +204,28 @@ def _load_gate() -> dict:
 
 AUTOPILOT_CACHE_PATH = Path(__file__).resolve().parent / "autopilot_cache.json"
 DRIVE_CACHE_PATH = Path(__file__).resolve().parent / "drive_cache.json"
+DRIVE_NOSIGN_CACHE_PATH = Path(__file__).resolve().parent / "drive_nosign_cache.json"
 _auto_state = {"mtime": None, "data": {}}
 _drive_state = {"mtime": None, "data": {}}
+_drive_nosign_state = {"mtime": None, "data": {}}
 
 
-def _load_drive() -> dict:
+def _load_json(path: Path, state: dict) -> dict:
     try:
-        m = DRIVE_CACHE_PATH.stat().st_mtime
+        m = path.stat().st_mtime
     except OSError:
         return {}
-    if _drive_state["mtime"] != m:
+    if state["mtime"] != m:
         try:
-            _drive_state["data"] = json.loads(DRIVE_CACHE_PATH.read_text())
+            state["data"] = json.loads(path.read_text())
         except (OSError, ValueError):
-            _drive_state["data"] = {}
-        _drive_state["mtime"] = m
-    return _drive_state["data"]
+            state["data"] = {}
+        state["mtime"] = m
+    return state["data"]
+
+
+def _load_drive(sign: bool = True) -> dict:
+    return _load_json(DRIVE_CACHE_PATH, _drive_state) if sign else _load_json(DRIVE_NOSIGN_CACHE_PATH, _drive_nosign_state)
 
 
 def _load_auto() -> dict:
@@ -241,10 +247,12 @@ def gate_config():
     auto = _load_auto()
     current = {gate.key(*r): gate.drive_sha(*r) for r in gate.requests()}
     data = {k: v for k, v in _load_drive().items() if v.get("prompt_sha") == current.get(k)}   # the game uses driver mode
+    current1 = {gate.key(*r): gate.drive_sha(*r, False) for r in gate.requests()}
+    round1 = sum(v.get("prompt_sha") == current1.get(k) for k, v in _load_drive(False).items())
     any_rec = next(iter(data.values()), {})
     planners = {v.get("planner") for v in data.values()} | {v.get("planner") for v in auto.values()}
     return {**gate.public_config(), "recorded": len(data), "requests": len(gate.requests()),
-            "autopilot_recorded": len(auto), "autopilot_starts": len(gate.autopilot_starts()),
+            "autopilot_recorded": len(auto), "autopilot_starts": len(gate.autopilot_starts()), "round1_recorded": round1,
             "planner": "mock" if "mock" in planners else any_rec.get("planner"),
             "model": any_rec.get("model"), "seed": any_rec.get("seed")}
 
@@ -269,6 +277,7 @@ def gate_autopilot(req: GateAuto):
 class GateMove(BaseModel):
     pos: list[int]
     dir: str
+    round: int = 2   # /api/gate/drive: 1 = first delivery without the sign, 2 = the sign is up
 
 
 @app.post("/api/gate/move")
@@ -296,8 +305,9 @@ def gate_drive(req: GateMove):
     pos = tuple(req.pos)
     if pos not in gate.floor_cells() or req.dir not in gate.DIRS:
         raise HTTPException(400, "invalid position or direction")
-    rec = _load_drive().get(gate.key(pos, req.dir))
-    if rec and rec.get("prompt_sha") != gate.drive_sha(pos, req.dir):
+    sign = req.round != 1
+    rec = _load_drive(sign).get(gate.key(pos, req.dir))
+    if rec and rec.get("prompt_sha") != gate.drive_sha(pos, req.dir, sign):
         rec = None
     if not rec:
         raise HTTPException(404, "This move has not been recorded yet.")

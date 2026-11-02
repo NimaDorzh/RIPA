@@ -8,6 +8,7 @@ python -m app.gate_build --autopilot --pilot 5   # autopilot episodes from 5 han
 python -m app.gate_build --autopilot             # autopilot episodes from every cell (resumable)
 python -m app.gate_build --drive --pilot 10      # DRIVER mode (what the game uses): the 10 unsafe suggestions first
 python -m app.gate_build --drive                 # all driver answers (resumable)
+python -m app.gate_build --drive --no-sign       # round 1 of the game: the same, without the sign
 
 One API call per request, decoding seed 1, temperature 0. The file is written after every answer, so an
 interrupted run loses nothing. API failures are not stored.
@@ -29,6 +30,7 @@ from .planner import MetaPlanner, MockPlanner, PlannerError, meta_configured
 GATE_CACHE = Path(__file__).resolve().parent / "gate_cache.json"
 AUTOPILOT_CACHE = Path(__file__).resolve().parent / "autopilot_cache.json"
 DRIVE_CACHE = Path(__file__).resolve().parent / "drive_cache.json"
+DRIVE_NOSIGN_CACHE = Path(__file__).resolve().parent / "drive_nosign_cache.json"   # round 1: no sign in the aisle
 
 
 def load(path: Path = GATE_CACHE) -> dict:
@@ -153,7 +155,7 @@ def build_autopilot(mock: bool = False, pilot: int = 0, force: bool = False, wor
 
 
 def build_drive(mock: bool = False, pilot: int = 0, force: bool = False, workers: int = 4,
-                path: Path = DRIVE_CACHE, planner=None) -> dict:
+                path: Path | None = None, planner=None, sign: bool = True) -> dict:
     """Driver mode: one planner call per (cell, suggested direction)."""
     from .planner import _parse_action
     if not mock and planner is None:
@@ -161,17 +163,18 @@ def build_drive(mock: bool = False, pilot: int = 0, force: bool = False, workers
             raise SystemExit("META_API_BASE / META_API_KEY / META_MODEL are not set. Use --mock for UI work only.")
         planner = MetaPlanner(cache_path=None, memoize=False)
         planner.seed = 1
+    path = path or (DRIVE_CACHE if sign else DRIVE_NOSIGN_CACHE)
     cache = load(path)
     reqs = gate.drive_order(gate.requests())
     if not force:
-        reqs = [r for r in reqs if cache.get(gate.key(*r), {}).get("prompt_sha") != gate.drive_sha(*r)]
+        reqs = [r for r in reqs if cache.get(gate.key(*r), {}).get("prompt_sha") != gate.drive_sha(*r, sign)]
     if pilot:
         reqs, workers = reqs[:pilot], min(workers, 2)
-    print(f"recording {len(reqs)} driver answers ({'mock' if mock else planner.model}), {workers} in parallel", flush=True)
+    print(f"recording {len(reqs)} driver answers {'with' if sign else 'WITHOUT'} the sign ({'mock' if mock else planner.model}), {workers} in parallel", flush=True)
     lock, t0 = threading.Lock(), time.time()
 
     def one(r):
-        raw = gate.mock_drive(*r) if mock else ask(planner, gate.drive_messages(*r))
+        raw = gate.mock_drive(*r, sign) if mock else ask(planner, gate.drive_messages(*r, sign))
         return r, raw
 
     with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
@@ -187,13 +190,13 @@ def build_drive(mock: bool = False, pilot: int = 0, force: bool = False, workers
                      "broke": world.execute(pos, done)[1] == "violation",
                      "planner": "mock" if mock else "meta", "model": None if mock else planner.model,
                      "seed": None if mock else planner.seed, "recorded_at": time.strftime("%Y-%m-%d"),
-                     "prompt_sha": gate.drive_sha(pos, d)}
+                     "prompt_sha": gate.drive_sha(pos, d, sign), "sign": sign}
             with lock:
                 cache[gate.key(pos, d)] = entry
                 path.write_text(json.dumps(cache, indent=1))
             if entry["unsafe_suggestion"] or entry["broke"]:
                 print(f"  {gate.key(pos, d):10} suggested {d:5} -> Muse {act:7} {'BROKE' if entry['broke'] else ''}", flush=True)
-    current = {gate.key(*r): gate.drive_sha(*r) for r in gate.requests()}
+    current = {gate.key(*r): gate.drive_sha(*r, sign) for r in gate.requests()}
     now = {k: v for k, v in cache.items() if v.get("prompt_sha") == current.get(k)}
     broke = sorted(k for k, v in now.items() if v["broke"])
     print(f"\ndone in {time.time() - t0:.0f}s; {len(now)} of {len(current)} driver answers recorded")
@@ -213,6 +216,9 @@ if __name__ == "__main__":
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--autopilot", action="store_true", help="record autopilot episodes instead of checker answers")
     ap.add_argument("--drive", action="store_true", help="record driver answers (the mode the game uses)")
+    ap.add_argument("--no-sign", action="store_true", help="with --drive: round 1 of the game, no sign in the aisle")
     a = ap.parse_args()
-    fn = build_drive if a.drive else build_autopilot if a.autopilot else build
-    fn(mock=a.mock, pilot=a.pilot, force=a.force, workers=a.workers)
+    if a.drive:
+        build_drive(mock=a.mock, pilot=a.pilot, force=a.force, workers=a.workers, sign=not a.no_sign)
+    else:
+        (build_autopilot if a.autopilot else build)(mock=a.mock, pilot=a.pilot, force=a.force, workers=a.workers)

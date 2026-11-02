@@ -828,3 +828,18 @@ def test_drive_record_and_api(client, tmp_path, monkeypatch):
 def test_play_page_offers_hints_only_on_request():
     html = (Path(__file__).resolve().parent.parent / "static" / "game.html").read_text(encoding="utf-8")
     assert 'id="hintBtn"' in html and "fails >= 5" in html and ".hintrow { display: none;" in html
+
+
+def test_round1_uses_no_sign_answers(client, tmp_path, monkeypatch):
+    p1, p2 = tmp_path / "r1.json", tmp_path / "r2.json"
+    gate_build.build_drive(mock=True, path=p1, sign=False)
+    gate_build.build_drive(mock=True, path=p2, sign=True)
+    assert "Sign: (none in view)" in gate.drive_messages((3, 3), "UP", sign=False)[1]["content"]
+    monkeypatch.setattr(main, "DRIVE_NOSIGN_CACHE_PATH", p1); monkeypatch.setattr(main, "DRIVE_CACHE_PATH", p2)
+    main._drive_state.update(mtime=None, data={}); main._drive_nosign_state.update(mtime=None, data={})
+    r1 = client.post("/api/gate/drive", json={"pos": [3, 3], "dir": "RIGHT", "round": 1}).json()
+    r2 = client.post("/api/gate/drive", json={"pos": [3, 3], "dir": "RIGHT", "round": 2}).json()
+    assert not r1["broke"] and r2["broke"]          # mock: fooled only when the sign is up (invented, tests only)
+    assert client.get("/api/gate/config").json()["round1_recorded"] == len(gate.requests())
+    html = client.get("/play").text
+    assert 'id="r1done"' in html and "Start round 2" in html and "round }" in html
