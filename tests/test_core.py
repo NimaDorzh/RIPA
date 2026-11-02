@@ -827,7 +827,7 @@ def test_drive_record_and_api(client, tmp_path, monkeypatch):
 
 def test_play_page_offers_hints_only_on_request():
     html = (Path(__file__).resolve().parent.parent / "static" / "game.html").read_text(encoding="utf-8")
-    assert 'id="hintBtn"' in html and "fails >= 5" in html and ".hintrow { display: none;" in html
+    assert 'id="hintBtn"' in html and "fails >= 3" in html and ".hintrow { display: none;" in html
 
 
 def test_round1_uses_no_sign_answers(client, tmp_path, monkeypatch):

@@ -12,7 +12,10 @@
   --body: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--floor); color: var(--ink); font: 17px/1.45 var(--body); max-width: 960px; margin: 0 auto; padding: 22px 16px 24px; }
+body { background: var(--floor); color: var(--ink); font: 17px/1.45 var(--body); max-width: 1200px; margin: 0 auto; padding: 22px 32px 32px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 28px; flex-wrap: wrap; }
+.nav-link { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 80; font-weight: 800; font-size: 1.25rem; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); padding: 6px 14px; border-radius: 3px; text-decoration: none; box-shadow: 3px 3px 0 var(--ink); white-space: nowrap; }
+.nav-link:hover { background: #ffd31a; }
 button { font: inherit; cursor: pointer; background: var(--paper); border: 1.5px solid var(--ink); border-radius: 3px; padding: 6px 14px; }
 button:hover { background: #fff; }
 button:focus-visible, canvas:focus-visible { outline: 3px solid #2457d6; outline-offset: 2px; }
@@ -45,12 +48,16 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 #hintText { font-size: .95rem; max-width: 70ch; }
 footer { margin-top: 18px; padding-top: 8px; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 footer a { color: var(--ink); }
+@media (max-width: 960px) { body { padding: 16px; } }
 @media (max-width: 600px) { h1 { font-size: 2.1rem; } .msg { font-size: 1.3rem; } .win h2 { font-size: 1.8rem; } .win p { font-size: .9rem; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
-<h1 class="display">Break Muse</h1>
+<header class="top">
+  <h1 class="display">Break Muse</h1>
+  <a href="/" class="nav-link">Lab view: all results &rarr;</a>
+</header>
 <p class="how"><b id="roundTag"></b> <span id="how"></span></p>
 <div class="mock" id="mock" role="alert">SIMULATED answers: an offline stand-in, not Meta's model.</div>
 
@@ -79,7 +86,7 @@ footer a { color: var(--ink); }
 <div class="hintrow" id="hintRow"><button type="button" id="hintBtn" class="hintbtn">Need a hint?</button><span id="hintText" role="status" aria-live="polite"></span></div>
 <div class="sign" id="sign"></div>
 
-<footer class="small"><span id="prov">Loading...</span><a href="/">Lab view: all results &rarr;</a></footer>
+<footer class="small"><span id="prov">Loading...</span><span>Meta Global AI Developer Hackathon</span></footer>
 
 <script>
 (() => {
@@ -100,7 +107,7 @@ footer a { color: var(--ink); }
     $('auto').style.display = n === 2 ? '' : 'none';
     $('skip').style.display = n === 1 ? '' : 'none';
     if (n === 1) $('hintRow').style.display = 'none';
-    else if (fails >= 5 && hintsShown < HINTS.length) $('hintRow').style.display = 'flex';
+    else if (fails >= 3 && hintsShown < HINTS.length) $('hintRow').style.display = 'flex';
   }
 
   const same = (a, b) => a && b && a[0] === b[0] && a[1] === b[1];
@@ -119,7 +126,7 @@ footer a { color: var(--ink); }
   function failed() {
     if (round !== 2) return;   // hints are about breaking Muse
     fails++;
-    if (fails >= 5 && hintsShown < HINTS.length) $('hintRow').style.display = 'flex';
+    if (fails >= 3 && hintsShown < HINTS.length) $('hintRow').style.display = 'flex';
   }
   function showHint() {
     if (hintsShown >= HINTS.length) return;
