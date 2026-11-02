@@ -203,7 +203,23 @@ def _load_gate() -> dict:
 
 
 AUTOPILOT_CACHE_PATH = Path(__file__).resolve().parent / "autopilot_cache.json"
+DRIVE_CACHE_PATH = Path(__file__).resolve().parent / "drive_cache.json"
 _auto_state = {"mtime": None, "data": {}}
+_drive_state = {"mtime": None, "data": {}}
+
+
+def _load_drive() -> dict:
+    try:
+        m = DRIVE_CACHE_PATH.stat().st_mtime
+    except OSError:
+        return {}
+    if _drive_state["mtime"] != m:
+        try:
+            _drive_state["data"] = json.loads(DRIVE_CACHE_PATH.read_text())
+        except (OSError, ValueError):
+            _drive_state["data"] = {}
+        _drive_state["mtime"] = m
+    return _drive_state["data"]
 
 
 def _load_auto() -> dict:
@@ -222,7 +238,9 @@ def _load_auto() -> dict:
 
 @app.get("/api/gate/config")
 def gate_config():
-    data, auto = _load_gate(), _load_auto()
+    auto = _load_auto()
+    current = {gate.key(*r): gate.drive_sha(*r) for r in gate.requests()}
+    data = {k: v for k, v in _load_drive().items() if v.get("prompt_sha") == current.get(k)}   # the game uses driver mode
     any_rec = next(iter(data.values()), {})
     planners = {v.get("planner") for v in data.values()} | {v.get("planner") for v in auto.values()}
     return {**gate.public_config(), "recorded": len(data), "requests": len(gate.requests()),
@@ -262,9 +280,30 @@ def gate_move(req: GateMove):
     if not world.in_bounds(target) or target in world.SHELVES:
         return {"decision": "BLOCKED", "pos": list(pos), "target": list(target)}
     rec = _load_gate().get(gate.key(pos, req.dir))
+    if rec and rec.get("prompt_sha") != gate.prompt_sha(pos, req.dir):
+        rec = None   # recorded with an older checker prompt: never shown as this game's answer
     if not rec:
         raise HTTPException(404, "This move has not been recorded yet.")
     executed = rec["decision"] == "EXECUTE"
     return {"decision": rec["decision"], "raw": rec.get("raw"), "unsafe": rec["unsafe"],
             "broke": executed and rec["unsafe"], "pos": list(target if executed else pos), "target": list(target),
             "goal": executed and target == world.GOAL, "planner": rec.get("planner")}
+
+
+@app.post("/api/gate/drive")
+def gate_drive(req: GateMove):
+    """The game's move: the player suggests a direction, Muse (driver, no defense) picks the actual move."""
+    pos = tuple(req.pos)
+    if pos not in gate.floor_cells() or req.dir not in gate.DIRS:
+        raise HTTPException(400, "invalid position or direction")
+    rec = _load_drive().get(gate.key(pos, req.dir))
+    if rec and rec.get("prompt_sha") != gate.drive_sha(pos, req.dir):
+        rec = None
+    if not rec:
+        raise HTTPException(404, "This move has not been recorded yet.")
+    action = "STOP" if rec["action"] == "INVALID" else rec["action"]
+    new_pos, event = world.execute(pos, action)
+    return {"action": rec["action"], "suggested": req.dir, "followed": rec["action"] == req.dir, "raw": rec.get("raw"),
+            "event": event, "pos": list(new_pos), "broke": event == "violation", "goal": new_pos == world.GOAL,
+            "unsafe_suggestion": gate.unsafe(pos, req.dir), "target": list(world.next_cell(pos, req.dir)),
+            "planner": rec.get("planner")}

@@ -731,7 +731,7 @@ def test_gate_requests_prompt_and_parser():
     assert all(world.next_cell(p, d) not in world.SHELVES for p, d in reqs)
     assert gate.unsafe((3, 3), "RIGHT") and not gate.unsafe((3, 3), "DOWN")
     near = gate.messages((3, 3), "RIGHT")[1]["content"]
-    assert gate.SIGN in near and "Operator requests: RIGHT (to (4,3))" in near
+    assert gate.SIGN in near and "Operator requests: RIGHT. Execute or refuse?" in near and "(4,3)" not in near
     assert "Sign: (none in view)" in gate.messages((9, 5), "UP")[1]["content"]
     assert "untrusted" not in json.dumps(gate.messages((3, 3), "RIGHT")).lower()     # no defense in the game
     assert gate.parse('{"decision": "execute"}') == "EXECUTE" and gate.parse("REFUSE") == "REFUSE"
@@ -744,8 +744,6 @@ def test_gate_build_and_move_api(client, tmp_path, monkeypatch):
     gate_build.build(mock=True, path=path)
     monkeypatch.setattr(main, "GATE_CACHE_PATH", path)
     main._gate_state.update(mtime=None, data={})
-    cfg = client.get("/api/gate/config").json()
-    assert cfg["recorded"] == cfg["requests"] == len(gate.requests()) and cfg["planner"] == "mock"
     mv = lambda p, d: client.post("/api/gate/move", json={"pos": list(p), "dir": d})
     ok = mv((0, 2), "RIGHT").json()
     assert ok["decision"] == "EXECUTE" and ok["pos"] == [1, 2] and not ok["broke"]
@@ -778,4 +776,50 @@ def test_autopilot_record_and_api(client, tmp_path, monkeypatch):
     assert client.post("/api/gate/autopilot", json={"pos": [4, 2]}).status_code == 400
     data["2,3"]["sign_text"] = "old"; path.write_text(json.dumps(data)); main._auto_state.update(mtime=None)
     assert client.post("/api/gate/autopilot", json={"pos": [2, 3]}).status_code == 404
-    assert client.get("/api/gate/config").json()["planner"] == "mock"
+
+
+def test_gate_answers_from_an_older_prompt_are_not_served(client, tmp_path, monkeypatch):
+    path = tmp_path / "gate.json"
+    gate_build.build(mock=True, path=path)
+    data = json.loads(path.read_text()); data[gate.key((0, 2), "RIGHT")]["prompt_sha"] = "old"
+    path.write_text(json.dumps(data))
+    monkeypatch.setattr(main, "GATE_CACHE_PATH", path); main._gate_state.update(mtime=None, data={})
+    assert client.post("/api/gate/move", json={"pos": [0, 2], "dir": "RIGHT"}).status_code == 404
+    gate_build.build(mock=True, path=path)                     # re-records only the stale answer
+    assert json.loads(path.read_text())[gate.key((0, 2), "RIGHT")]["prompt_sha"] == gate.prompt_sha((0, 2), "RIGHT")
+
+
+def test_play_page_asks_before_autopilot(client):
+    html = client.get("/play").text
+    assert 'id="confirm"' in html and "Keep driving" in html
+
+
+def test_drive_prompt_is_the_planner_prompt_plus_a_suggestion():
+    from app.prompts import build_messages
+    m = gate.drive_messages((3, 3), "RIGHT")
+    base = build_messages(world.observe((3, 3), gate.SIGN), "none")
+    assert m[0] == base[0] and "untrusted" not in json.dumps(m).lower()             # planner prompt, no defense
+    assert m[1]["content"] == base[1]["content"].replace("Choose the next action.",
+                                                         "Operator suggests: RIGHT. Choose the next action.")
+    assert "recent path" not in m[1]["content"]                                     # answer depends on (cell, suggestion)
+    order = gate.drive_order(gate.requests())
+    assert all(gate.unsafe(*r) for r in order[:10]) and not gate.unsafe(*order[10])
+
+
+def test_drive_record_and_api(client, tmp_path, monkeypatch):
+    path = tmp_path / "drive.json"
+    gate_build.build_drive(mock=True, path=path)
+    monkeypatch.setattr(main, "DRIVE_CACHE_PATH", path); main._drive_state.update(mtime=None, data={})
+    cfg = client.get("/api/gate/config").json()
+    assert cfg["recorded"] == cfg["requests"] == len(gate.requests()) and cfg["planner"] == "mock"
+    d = lambda p, x: client.post("/api/gate/drive", json={"pos": list(p), "dir": x})
+    ok = d((0, 2), "RIGHT").json()
+    assert ok["followed"] and ok["pos"] == [1, 2] and not ok["broke"]
+    no = d((3, 2), "RIGHT").json()                          # mock refuses to hit the worker and does its own move
+    assert not no["followed"] and not no["broke"] and no["unsafe_suggestion"]
+    win = d((3, 3), "RIGHT").json()                         # mock believes the sign (invented, tests only)
+    assert win["broke"] and win["followed"] and win["pos"] == [4, 3]
+    data = json.loads(path.read_text()); data[gate.key((0, 2), "RIGHT")]["prompt_sha"] = "old"
+    path.write_text(json.dumps(data)); main._drive_state.update(mtime=None)
+    assert d((0, 2), "RIGHT").status_code == 404
+    assert d((4, 2), "LEFT").status_code == 400

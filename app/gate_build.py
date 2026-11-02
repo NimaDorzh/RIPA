@@ -6,6 +6,8 @@ python -m app.gate_build --force         # re-record all
 python -m app.gate_build --mock          # offline stand-in for UI work ONLY (the page shows a SIMULATED banner)
 python -m app.gate_build --autopilot --pilot 5   # autopilot episodes from 5 hand-over cells (those next to the sign first)
 python -m app.gate_build --autopilot             # autopilot episodes from every cell (resumable)
+python -m app.gate_build --drive --pilot 10      # DRIVER mode (what the game uses): the 10 unsafe suggestions first
+python -m app.gate_build --drive                 # all driver answers (resumable)
 
 One API call per request, decoding seed 1, temperature 0. The file is written after every answer, so an
 interrupted run loses nothing. API failures are not stored.
@@ -26,6 +28,7 @@ from .planner import MetaPlanner, MockPlanner, PlannerError, meta_configured
 
 GATE_CACHE = Path(__file__).resolve().parent / "gate_cache.json"
 AUTOPILOT_CACHE = Path(__file__).resolve().parent / "autopilot_cache.json"
+DRIVE_CACHE = Path(__file__).resolve().parent / "drive_cache.json"
 
 
 def load(path: Path = GATE_CACHE) -> dict:
@@ -62,8 +65,8 @@ def build(mock: bool = False, pilot: int = 0, force: bool = False, workers: int 
     cache = load(path)
     reqs = gate.requests()
     reqs.sort(key=lambda r: not gate.unsafe(*r))            # the moves that decide the game first
-    if not force:
-        reqs = [r for r in reqs if gate.key(*r) not in cache]
+    if not force:   # missing, or recorded with an older version of the checker prompt
+        reqs = [r for r in reqs if cache.get(gate.key(*r), {}).get("prompt_sha") != gate.prompt_sha(*r)]
     if pilot:
         reqs, workers = reqs[:pilot], min(workers, 2)
     print(f"recording {len(reqs)} requests ({'mock' if mock else planner.model}), {workers} in parallel", flush=True)
@@ -86,15 +89,17 @@ def build(mock: bool = False, pilot: int = 0, force: bool = False, workers: int 
             entry = {"decision": dec, "raw": (raw or "")[:300], "unsafe": gate.unsafe(pos, d),
                      "planner": "mock" if mock else "meta", "model": None if mock else planner.model,
                      "seed": None if mock else planner.seed, "recorded_at": time.strftime("%Y-%m-%d"),
-                     "prompt_sha": hashlib.sha256(json.dumps(msgs, sort_keys=True).encode()).hexdigest()[:16]}
+                     "prompt_sha": gate.prompt_sha(pos, d)}
             with lock:
                 cache[gate.key(pos, d)] = entry
                 path.write_text(json.dumps(cache, indent=1))
             if entry["unsafe"]:
                 print(f"  UNSAFE request {gate.key(pos, d):10} -> {dec}  raw={entry['raw']!r}", flush=True)
-    rec = [v for v in cache.values()]
-    broke = [k for k, v in cache.items() if v["unsafe"] and v["decision"] == "EXECUTE"]
-    print(f"\ndone in {time.time() - t0:.0f}s; {len(cache)} of {len(gate.requests())} requests recorded, "
+    current = {gate.key(*r): gate.prompt_sha(*r) for r in gate.requests()}
+    cache_now = {k: v for k, v in cache.items() if v.get("prompt_sha") == current.get(k)}
+    rec = list(cache_now.values())
+    broke = [k for k, v in cache_now.items() if v["unsafe"] and v["decision"] == "EXECUTE"]
+    print(f"\ndone in {time.time() - t0:.0f}s; {len(cache_now)} of {len(gate.requests())} requests recorded with the current prompt, "
           f"{len(failed)} failed")
     print(f"unsafe requests executed (ways to win): {broke or 'none'}")
     print(f"invalid replies: {sum(v['decision'] == gate.INVALID for v in rec)}; "
@@ -147,6 +152,59 @@ def build_autopilot(mock: bool = False, pilot: int = 0, force: bool = False, wor
     return cache
 
 
+def build_drive(mock: bool = False, pilot: int = 0, force: bool = False, workers: int = 4,
+                path: Path = DRIVE_CACHE, planner=None) -> dict:
+    """Driver mode: one planner call per (cell, suggested direction)."""
+    from .planner import _parse_action
+    if not mock and planner is None:
+        if not meta_configured():
+            raise SystemExit("META_API_BASE / META_API_KEY / META_MODEL are not set. Use --mock for UI work only.")
+        planner = MetaPlanner(cache_path=None, memoize=False)
+        planner.seed = 1
+    cache = load(path)
+    reqs = gate.drive_order(gate.requests())
+    if not force:
+        reqs = [r for r in reqs if cache.get(gate.key(*r), {}).get("prompt_sha") != gate.drive_sha(*r)]
+    if pilot:
+        reqs, workers = reqs[:pilot], min(workers, 2)
+    print(f"recording {len(reqs)} driver answers ({'mock' if mock else planner.model}), {workers} in parallel", flush=True)
+    lock, t0 = threading.Lock(), time.time()
+
+    def one(r):
+        raw = gate.mock_drive(*r) if mock else ask(planner, gate.drive_messages(*r))
+        return r, raw
+
+    with ThreadPoolExecutor(max_workers=max(1, workers)) as ex:
+        for f in as_completed([ex.submit(one, r) for r in reqs]):
+            try:
+                (pos, d), raw = f.result()
+            except PlannerError as e:
+                print(f"  FAILED: {e}", flush=True)
+                continue
+            act = _parse_action(raw)
+            done = "STOP" if act == "INVALID" else act
+            entry = {"action": act, "raw": (raw or "")[:300], "suggested": d, "unsafe_suggestion": gate.unsafe(pos, d),
+                     "broke": world.execute(pos, done)[1] == "violation",
+                     "planner": "mock" if mock else "meta", "model": None if mock else planner.model,
+                     "seed": None if mock else planner.seed, "recorded_at": time.strftime("%Y-%m-%d"),
+                     "prompt_sha": gate.drive_sha(pos, d)}
+            with lock:
+                cache[gate.key(pos, d)] = entry
+                path.write_text(json.dumps(cache, indent=1))
+            if entry["unsafe_suggestion"] or entry["broke"]:
+                print(f"  {gate.key(pos, d):10} suggested {d:5} -> Muse {act:7} {'BROKE' if entry['broke'] else ''}", flush=True)
+    current = {gate.key(*r): gate.drive_sha(*r) for r in gate.requests()}
+    now = {k: v for k, v in cache.items() if v.get("prompt_sha") == current.get(k)}
+    broke = sorted(k for k, v in now.items() if v["broke"])
+    print(f"\ndone in {time.time() - t0:.0f}s; {len(now)} of {len(current)} driver answers recorded")
+    print(f"states where Muse drove into the zone (ways to win): {broke or 'none'}")
+    print(f"followed the suggestion: {sum(v['action'] == v['suggested'] for v in now.values())} of {len(now)}; "
+          f"invalid replies: {sum(v['action'] == 'INVALID' for v in now.values())}")
+    if planner is not None:
+        print(f"usage: {planner.usage}")
+    return cache
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--mock", action="store_true")
@@ -154,5 +212,7 @@ if __name__ == "__main__":
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--autopilot", action="store_true", help="record autopilot episodes instead of checker answers")
+    ap.add_argument("--drive", action="store_true", help="record driver answers (the mode the game uses)")
     a = ap.parse_args()
-    (build_autopilot if a.autopilot else build)(mock=a.mock, pilot=a.pilot, force=a.force, workers=a.workers)
+    fn = build_drive if a.drive else build_autopilot if a.autopilot else build
+    fn(mock=a.mock, pilot=a.pilot, force=a.force, workers=a.workers)
