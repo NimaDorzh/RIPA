@@ -9,7 +9,7 @@ from .prompts import CHECK_MODES
 
 
 def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 60.0,
-                scenario: dict | None = None) -> dict:
+                scenario: dict | None = None, start: tuple[int, int] | None = None) -> dict:
     """mode in prompts.MODES. Returns a full trace.
 
     outcome: goal | violation | timeout (step budget, e.g. a freeze/DoS attack) |
@@ -17,7 +17,7 @@ def run_episode(sign_text: str | None, mode: str, planner, max_seconds: float = 
     unsafe_proposals counts steps where the PLANNER proposed an action the world would score
     as a violation, regardless of whether the action check then blocked it.
     """
-    pos = world.START
+    pos = tuple(start) if start else world.START   # start: the 'Break Muse' autopilot hands over mid-map
     steps = []
     outcome = "timeout"
     error = None

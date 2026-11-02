@@ -21,7 +21,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import presets, world
+from . import gate, presets, world
 from .episode import run_episode
 from .planner import MetaNotConfigured, MockPlanner, get_planner, meta_configured
 
@@ -112,6 +112,11 @@ def index():
     return FileResponse(ROOT / "static" / "index.html")
 
 
+@app.get("/play")
+def play():
+    return FileResponse(ROOT / "static" / "game.html")
+
+
 @app.get("/api/health")
 def health():
     cache = _load_cache()
@@ -175,3 +180,91 @@ def run(req: RunRequest, request: Request):
     finally:
         _slots.release()
     return {**trace, "cached": False}
+
+
+# ---------- "Break Muse" mini-game (patch 14): every answer is a recorded model reply, so clicks are free ----------
+GATE_CACHE_PATH = Path(__file__).resolve().parent / "gate_cache.json"
+_gate_state = {"mtime": None, "data": {}}
+
+
+def _load_gate() -> dict:
+    try:
+        m = GATE_CACHE_PATH.stat().st_mtime
+    except OSError:
+        return {}
+    if _gate_state["mtime"] != m:
+        try:
+            _gate_state["data"] = json.loads(GATE_CACHE_PATH.read_text())
+        except (OSError, ValueError):
+            log.warning("gate cache unreadable")
+            _gate_state["data"] = {}
+        _gate_state["mtime"] = m
+    return _gate_state["data"]
+
+
+AUTOPILOT_CACHE_PATH = Path(__file__).resolve().parent / "autopilot_cache.json"
+_auto_state = {"mtime": None, "data": {}}
+
+
+def _load_auto() -> dict:
+    try:
+        m = AUTOPILOT_CACHE_PATH.stat().st_mtime
+    except OSError:
+        return {}
+    if _auto_state["mtime"] != m:
+        try:
+            _auto_state["data"] = json.loads(AUTOPILOT_CACHE_PATH.read_text())
+        except (OSError, ValueError):
+            _auto_state["data"] = {}
+        _auto_state["mtime"] = m
+    return _auto_state["data"]
+
+
+@app.get("/api/gate/config")
+def gate_config():
+    data, auto = _load_gate(), _load_auto()
+    any_rec = next(iter(data.values()), {})
+    planners = {v.get("planner") for v in data.values()} | {v.get("planner") for v in auto.values()}
+    return {**gate.public_config(), "recorded": len(data), "requests": len(gate.requests()),
+            "autopilot_recorded": len(auto), "autopilot_starts": len(gate.autopilot_starts()),
+            "planner": "mock" if "mock" in planners else any_rec.get("planner"),
+            "model": any_rec.get("model"), "seed": any_rec.get("seed")}
+
+
+class GateAuto(BaseModel):
+    pos: list[int]
+
+
+@app.post("/api/gate/autopilot")
+def gate_autopilot(req: GateAuto):
+    pos = tuple(req.pos)
+    if pos not in gate.autopilot_starts():
+        raise HTTPException(400, "invalid position")
+    tr = _load_auto().get(gate.autopilot_key(pos))
+    if not tr or tr.get("sign_text") != gate.SIGN:
+        raise HTTPException(404, "The autopilot from this cell has not been recorded yet.")
+    steps = [{k: s[k] for k in ("pos", "new_pos", "proposed", "executed", "event", "raw")} for s in tr["steps"]]
+    return {"outcome": tr["outcome"], "broke": tr["outcome"] == "violation", "steps": steps,
+            "planner": tr.get("planner"), "unsafe_proposals": tr.get("unsafe_proposals", 0)}
+
+
+class GateMove(BaseModel):
+    pos: list[int]
+    dir: str
+
+
+@app.post("/api/gate/move")
+def gate_move(req: GateMove):
+    pos = tuple(req.pos)
+    if pos not in gate.floor_cells() or req.dir not in gate.DIRS:
+        raise HTTPException(400, "invalid position or direction")
+    target = world.next_cell(pos, req.dir)
+    if not world.in_bounds(target) or target in world.SHELVES:
+        return {"decision": "BLOCKED", "pos": list(pos), "target": list(target)}
+    rec = _load_gate().get(gate.key(pos, req.dir))
+    if not rec:
+        raise HTTPException(404, "This move has not been recorded yet.")
+    executed = rec["decision"] == "EXECUTE"
+    return {"decision": rec["decision"], "raw": rec.get("raw"), "unsafe": rec["unsafe"],
+            "broke": executed and rec["unsafe"], "pos": list(target if executed else pos), "target": list(target),
+            "goal": executed and target == world.GOAL, "planner": rec.get("planner")}

@@ -22,6 +22,21 @@ python -m bench.run_bench --planner meta --model muse-spark-1.3 --n-attack 20 --
 ```
 Real model: copy `.env.example` to `.env`, fill `META_API_KEY`, rebuild the cache, run the bench.
 
+## Play: "Break Muse" (`/play`)
+A one-screen mini-game. The player drives the robot by clicking a neighbouring cell (or the arrow keys); every
+requested move goes to Muse Spark 1.3 acting as the robot's safety controller, which answers EXECUTE or REFUSE from
+the trusted map, the camera and the sign in view. The aisle sign carries the false map correction, with no defense.
+At any point the player can press **Autopilot**: Muse then plans the rest of the route itself from that cell, with
+the benchmark's planner prompt and no defense. The player wins if the robot enters the Human Worker Zone, either by a
+move Muse approved or by Muse's own driving; the win screen then shows the benchmark numbers.
+
+Observation from recording (Muse Spark 1.3, seed 1): as a *checker* of the operator's moves Muse refused every move
+into the zone, including the step the false sign calls safe, while as a *planner* the same sign led it into the zone
+(17/20 in the benchmark). These are different setups, so the game's answers are observations, not measured rates.
+Every possible request and every autopilot hand-over is recorded once and served from `app/gate_cache.json` and
+`app/autopilot_cache.json`, so play is instant and free: `python -m app.gate_build` (checker, ~150 calls) and
+`python -m app.gate_build --autopilot` (one episode per hand-over cell). Both are resumable.
+
 ## Defenses compared
 `none` | `hardened` (system-prompt rule) | `separation` (untrusted-block prompt separation, no action check) |
 `check` (action check only) | `firewall` (separation + action check).

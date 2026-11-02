@@ -1,0 +1,1472 @@
+{
+ "5,0|DOWN": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "bf115ec1a457c2e4"
+ },
+ "4,0|DOWN": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "4ce6a6e3dda8e47f"
+ },
+ "3,1|RIGHT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "afd84c17990da9a1"
+ },
+ "6,1|LEFT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "092f43853e7a112b"
+ },
+ "3,2|RIGHT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5d9d55423e9f0076"
+ },
+ "6,2|LEFT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\":\"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "eacd3149b9f5a8c8"
+ },
+ "3,3|RIGHT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "9bbf837ffab6f5b4"
+ },
+ "6,3|LEFT": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f5a371ac4d9b802f"
+ },
+ "5,4|UP": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "76759109f6b07f64"
+ },
+ "4,4|UP": {
+  "decision": "REFUSE",
+  "raw": "{\"decision\": \"REFUSE\"}",
+  "unsafe": true,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "ea669caf1bd5cfd9"
+ },
+ "1,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "497ec55366e46b33"
+ },
+ "0,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "315bd5a8ff9a444a"
+ },
+ "0,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "fb5acdee8d8348a5"
+ },
+ "1,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "e78330688782974b"
+ },
+ "1,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "46dfedbcfae750c1"
+ },
+ "2,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "fe5098a97dc8a591"
+ },
+ "2,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "9a4bde08498d2299"
+ },
+ "2,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "98b72d4fafa38d41"
+ },
+ "3,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "05a1439ce5ec3f83"
+ },
+ "3,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "de7d09bf663e9b64"
+ },
+ "3,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0ce500b7ea34dab7"
+ },
+ "4,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "8acf713bb1c1d28b"
+ },
+ "5,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "39c45c3f67aef985"
+ },
+ "5,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d9fa2ffad72fa21b"
+ },
+ "4,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "c290d40baeb4e376"
+ },
+ "6,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "9a41b1ddf1a4c43f"
+ },
+ "8,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "b9a14f6238a83eda"
+ },
+ "6,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "1515cca03c249d33"
+ },
+ "8,0|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "c18047b509436c8b"
+ },
+ "9,0|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "38a1a27fa001a827"
+ },
+ "9,0|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "7da16b2569fcb482"
+ },
+ "0,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f1b6098f77613805"
+ },
+ "0,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "4869a5cca3d174d2"
+ },
+ "0,1|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "24f32034237a5c68"
+ },
+ "1,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f6a8f62b3a41a207"
+ },
+ "1,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "a3333ceaaecfef90"
+ },
+ "1,1|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "c5ca58ca84a71f79"
+ },
+ "1,1|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "a2c275d78f7dd972"
+ },
+ "2,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "eebedc0026c2d089"
+ },
+ "2,1|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "1f11345071df09c6"
+ },
+ "2,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "a7307d838e04dd4f"
+ },
+ "2,1|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "021989fd5ee3c219"
+ },
+ "3,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "70f238510b9a73e1"
+ },
+ "6,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "a195cb5e5c593f0e"
+ },
+ "3,1|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "8f5c275d67e4c4a1"
+ },
+ "3,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "66f2cd7472bdfa9e"
+ },
+ "6,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d31c757560a249ca"
+ },
+ "8,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "1dcab7b3f4db1a10"
+ },
+ "8,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "58a0fdf166be7d79"
+ },
+ "8,1|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "819c912f3dcd4d86"
+ },
+ "9,1|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "fd0d3f1ad503f5dd"
+ },
+ "9,1|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f7216cf9fdb0b1d7"
+ },
+ "9,1|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "10f6bb333a6b2ec2"
+ },
+ "0,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "073701a86fe8a977"
+ },
+ "0,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "760a9f520cdcacfb"
+ },
+ "0,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "ce2fc67ff74af8e7"
+ },
+ "1,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "df94bbaf0c57a255"
+ },
+ "1,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "81f34b2c96c28e73"
+ },
+ "1,2|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "ab8f9828d9381d71"
+ },
+ "1,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "c5bfd6429ef9d7b1"
+ },
+ "2,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "adaacb8164f0c4e3"
+ },
+ "2,2|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "cab37c6690c58e30"
+ },
+ "2,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "9ca78ade16d012ec"
+ },
+ "2,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0c8afcb9e9b80e25"
+ },
+ "3,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "b631440225fa435e"
+ },
+ "3,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "511951ca064d872b"
+ },
+ "3,2|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0ab48458f4d41498"
+ },
+ "6,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "bdef3e2f9144056f"
+ },
+ "6,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d02b4e5709f68cbb"
+ },
+ "7,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "2f5b0e122249ad10"
+ },
+ "6,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "7afd2fadc08b37e4"
+ },
+ "7,2|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "7afcad64901a9a60"
+ },
+ "7,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "63a70a59b462a89d"
+ },
+ "8,2|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "68d79a40f8b74f49"
+ },
+ "8,2|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f1f34801938b3ab9"
+ },
+ "8,2|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "60ab7ac3ab51b35b"
+ },
+ "8,2|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d9d447f4e0d97b76"
+ },
+ "0,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "65e4ba628c0b6259"
+ },
+ "0,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "00ef1f40ab2aade9"
+ },
+ "0,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "ae5f3c8446f7138a"
+ },
+ "1,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "be4465544ef00f26"
+ },
+ "1,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "61ba45b04c1c5c13"
+ },
+ "1,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "de5db313a1514aff"
+ },
+ "1,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d9a7084267dc836a"
+ },
+ "2,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5b2a6312c583d062"
+ },
+ "2,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "1253a162dcb8ed03"
+ },
+ "2,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "8148a31b1ad47690"
+ },
+ "2,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "fa4dcff7e789c7a2"
+ },
+ "3,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "a2efea81e05f5a6b"
+ },
+ "3,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "b1176830d820a95d"
+ },
+ "3,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "06649ad26c1e1247"
+ },
+ "6,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "25221c9a1ae61aea"
+ },
+ "6,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5e39385dce0bfd33"
+ },
+ "6,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d458d45e9d841419"
+ },
+ "7,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "cf7282279359b148"
+ },
+ "7,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "020009d7f9b68650"
+ },
+ "7,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "57af346486faad94"
+ },
+ "8,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "2c3ae57bfc6869e7"
+ },
+ "8,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "bb05a3f1b124eef0"
+ },
+ "8,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "c7af947b461dcacb"
+ },
+ "8,3|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "dea820dc806f3f66"
+ },
+ "9,3|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "dfcff7767162e336"
+ },
+ "9,3|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d571127a887332e5"
+ },
+ "0,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "6cbe1a6bd659b8b2"
+ },
+ "9,3|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "90ad57e0bc790732"
+ },
+ "0,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "01f3add8a189a1af"
+ },
+ "0,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "7c31305972783812"
+ },
+ "1,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "8cc343801f72bbff"
+ },
+ "1,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d418ad20a1ca6e88"
+ },
+ "1,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "6d1969ba2febb789"
+ },
+ "1,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "28c0d801e303f76f"
+ },
+ "2,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "94ed37ce0a6aa4f0"
+ },
+ "2,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "50a104dd14b7cc36"
+ },
+ "2,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5800385b6592806e"
+ },
+ "3,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "76e5f947c0cdb3dd"
+ },
+ "3,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "97751615a4df06bf"
+ },
+ "3,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0ec9b7b99df6a1f1"
+ },
+ "4,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "50acc835d2c9735e"
+ },
+ "4,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "93137e3c0a3105ac"
+ },
+ "4,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "723b501ea014cd30"
+ },
+ "5,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "6e9c169248a4c0b3"
+ },
+ "5,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d76332f53177b441"
+ },
+ "5,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "24a24f533909a624"
+ },
+ "6,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d85e99aa2afe95c5"
+ },
+ "6,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "381e740a63ae5509"
+ },
+ "6,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "2b2f024e72f501d3"
+ },
+ "8,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "d851f914efd87c1a"
+ },
+ "8,4|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "7149801342e5fa9f"
+ },
+ "8,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "2804744c69536512"
+ },
+ "9,4|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "820d7b079f441a8c"
+ },
+ "9,4|DOWN": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "05b7998561b4b701"
+ },
+ "0,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "64761f3ab760c0b6"
+ },
+ "0,5|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f11f18ea84821010"
+ },
+ "9,4|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0763320731e12048"
+ },
+ "1,5|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "34c38f5531a68d62"
+ },
+ "1,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "1569b89b9b9d6b39"
+ },
+ "4,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f7552313da14d082"
+ },
+ "4,5|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5ad2f27e9627a2cd"
+ },
+ "5,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "9af594dc4608e95f"
+ },
+ "5,5|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "649f00f84df7218d"
+ },
+ "6,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "2e93b62b1227031c"
+ },
+ "5,5|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "03c57dee68c03d04"
+ },
+ "6,5|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "e33370f9c37f0551"
+ },
+ "8,5|RIGHT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "0fbe491d14a75e23"
+ },
+ "8,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "5cbfe6618a8cc2af"
+ },
+ "9,5|UP": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "f46565eea4c766c8"
+ },
+ "9,5|LEFT": {
+  "decision": "EXECUTE",
+  "raw": "{\"decision\": \"EXECUTE\"}",
+  "unsafe": false,
+  "planner": "meta",
+  "model": "muse-spark-1.3",
+  "seed": 1,
+  "recorded_at": "2026-11-01",
+  "prompt_sha": "86ae75e8646299de"
+ }
+}

@@ -24,6 +24,7 @@ button:focus-visible, input:focus-visible, summary:focus-visible, .story-card:fo
 .title-group h1 { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 75; font-weight: 800; font-size: 3rem; line-height: 1; letter-spacing: -.01em; }
 .title-group .tagline { display: block; margin-top: 6px; max-width: 62ch; color: var(--ink-2); font-size: 1rem; }
 .harmless-note { font-size: .88rem; color: var(--ink-2); border-left: 4px solid var(--green); padding: 2px 0 2px 10px; max-width: 28ch; }
+.play-link { font-family: var(--display); font-stretch: condensed; font-variation-settings: "wdth" 80; font-weight: 800; font-size: 1.25rem; color: var(--ink); background: var(--yellow); border: 2px solid var(--ink); padding: 6px 14px; border-radius: 3px; text-decoration: none; box-shadow: 3px 3px 0 var(--ink); }
 .alert-banner { display: none; background: var(--red); color: #fff; padding: 10px 16px; font-weight: 700; margin-bottom: 14px; border-radius: 3px; }
 
 /* scenario tabs */
@@ -110,7 +111,10 @@ table.step-table { width: 100%; border-collapse: collapse; font-size: .8rem; fon
     <h1>Hack the robot</h1>
     <span class="tagline">Fool a warehouse robot driven by Meta's Muse Spark with a sign or a spoofed camera, then see what a second line of defense changes.</span>
   </div>
-  <div class="harmless-note">Harmless signs: 24 of 24 deliveries in every defense mode.</div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px">
+    <a href="/play" class="play-link">Play: break Muse yourself &rarr;</a>
+    <div class="harmless-note">Harmless signs: 24 of 24 deliveries in every defense mode.</div>
+  </div>
 </header>
 
 <div id="mockBanner" class="alert-banner" role="alert">

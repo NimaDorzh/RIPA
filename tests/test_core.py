@@ -719,3 +719,63 @@ def test_stale_preset_recording_is_not_served(client, tmp_path):
     assert r.get("cached") is not True                     # stale text: not replayed (live run on the mock instead)
     r = client.post("/api/run", json={"preset_id": "map-errata", "firewall": True}).json()
     assert r["cached"] is True and r["planner"] == "recorded"
+
+
+# ---------- patch 14: "Break Muse" mini-game ----------
+from app import gate, gate_build
+
+
+def test_gate_requests_prompt_and_parser():
+    reqs = gate.requests()
+    assert len(reqs) == len({gate.key(*r) for r in reqs}) and ((3, 3), "RIGHT") in reqs
+    assert all(world.next_cell(p, d) not in world.SHELVES for p, d in reqs)
+    assert gate.unsafe((3, 3), "RIGHT") and not gate.unsafe((3, 3), "DOWN")
+    near = gate.messages((3, 3), "RIGHT")[1]["content"]
+    assert gate.SIGN in near and "Operator requests: RIGHT (to (4,3))" in near
+    assert "Sign: (none in view)" in gate.messages((9, 5), "UP")[1]["content"]
+    assert "untrusted" not in json.dumps(gate.messages((3, 3), "RIGHT")).lower()     # no defense in the game
+    assert gate.parse('{"decision": "execute"}') == "EXECUTE" and gate.parse("REFUSE") == "REFUSE"
+    for bad in (None, "", "EXECUTE, but carefully", '{"decision": "EXECUTE", "why": 1}', "maybe"):
+        assert gate.parse(bad) == gate.INVALID
+
+
+def test_gate_build_and_move_api(client, tmp_path, monkeypatch):
+    path = tmp_path / "gate.json"
+    gate_build.build(mock=True, path=path)
+    monkeypatch.setattr(main, "GATE_CACHE_PATH", path)
+    main._gate_state.update(mtime=None, data={})
+    cfg = client.get("/api/gate/config").json()
+    assert cfg["recorded"] == cfg["requests"] == len(gate.requests()) and cfg["planner"] == "mock"
+    mv = lambda p, d: client.post("/api/gate/move", json={"pos": list(p), "dir": d})
+    ok = mv((0, 2), "RIGHT").json()
+    assert ok["decision"] == "EXECUTE" and ok["pos"] == [1, 2] and not ok["broke"]
+    no = mv((3, 2), "RIGHT").json()
+    assert no["decision"] == "REFUSE" and no["pos"] == [3, 2] and no["unsafe"] and not no["broke"]
+    win = mv((3, 3), "RIGHT").json()           # the mock believes the sign here (invented behaviour, tests only)
+    assert win["broke"] and win["pos"] == [4, 3]
+    assert mv((6, 0), "RIGHT").json()["decision"] == "BLOCKED"
+    assert mv((4, 2), "LEFT").status_code == 400 and mv((0, 2), "JUMP").status_code == 400
+    data = json.loads(path.read_text()); del data[gate.key((0, 2), "RIGHT")]
+    path.write_text(json.dumps(data)); main._gate_state.update(mtime=None)
+    assert mv((0, 2), "RIGHT").status_code == 404
+
+
+def test_play_page_served_and_linked(client):
+    assert "Break Muse" in client.get("/play").text
+    assert 'href="/play"' in client.get("/").text
+
+
+def test_autopilot_record_and_api(client, tmp_path, monkeypatch):
+    path = tmp_path / "auto.json"
+    gate_build.build_autopilot(mock=True, path=path)
+    monkeypatch.setattr(main, "AUTOPILOT_CACHE_PATH", path)
+    main._auto_state.update(mtime=None, data={})
+    data = json.loads(path.read_text())
+    assert len(data) == len(gate.autopilot_starts())
+    assert all(v["start"] == v["steps"][0]["pos"] for v in data.values())          # starts at the hand-over cell
+    r = client.post("/api/gate/autopilot", json={"pos": [2, 3]}).json()
+    assert r["steps"][0]["pos"] == [2, 3] and r["broke"] == (r["outcome"] == "violation") and r["planner"] == "mock"
+    assert client.post("/api/gate/autopilot", json={"pos": [4, 2]}).status_code == 400
+    data["2,3"]["sign_text"] = "old"; path.write_text(json.dumps(data)); main._auto_state.update(mtime=None)
+    assert client.post("/api/gate/autopilot", json={"pos": [2, 3]}).status_code == 404
+    assert client.get("/api/gate/config").json()["planner"] == "mock"
