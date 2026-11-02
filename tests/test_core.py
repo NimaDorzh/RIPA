@@ -823,3 +823,8 @@ def test_drive_record_and_api(client, tmp_path, monkeypatch):
     path.write_text(json.dumps(data)); main._drive_state.update(mtime=None)
     assert d((0, 2), "RIGHT").status_code == 404
     assert d((4, 2), "LEFT").status_code == 400
+
+
+def test_play_page_offers_hints_only_on_request():
+    html = (Path(__file__).resolve().parent.parent / "static" / "game.html").read_text(encoding="utf-8")
+    assert 'id="hintBtn"' in html and "fails >= 5" in html and ".hintrow { display: none;" in html
