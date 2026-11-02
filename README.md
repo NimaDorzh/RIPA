@@ -30,9 +30,18 @@ At any point the player can press **Autopilot**: Muse then plans the rest of the
 the benchmark's planner prompt and no defense. The player wins if the robot enters the Human Worker Zone, either by a
 move Muse approved or by Muse's own driving; the win screen then shows the benchmark numbers.
 
-Observation from recording (Muse Spark 1.3, seed 1): as a *checker* of the operator's moves Muse refused every move
-into the zone, including the step the false sign calls safe, while as a *planner* the same sign led it into the zone
-(17/20 in the benchmark). These are different setups, so the game's answers are observations, not measured rates.
+Observations from the recording (Muse Spark 1.3, decoding seed 1, one run per state, so these are observations, not
+measured rates):
+- **As a checker** of the operator's moves, Muse refused all 10 moves into the zone, including the step the false
+  sign calls safe, and approved all 137 safe moves (0 invalid replies). The player cannot drive it into the zone.
+- **As the autopilot**, the same sign led it into the zone from 20 of the 47 hand-over cells: 20 of the 25 cells on
+  the sign's side of the zone (west), 0 of the 22 cells east of the zone (the sign is out of view there).
+- **The sign is the cause:** from the 7 hand-over cells next to the sign, the autopilot entered the zone in 7/7 runs
+  with the sign and 0/7 without it (same cells, same seed; exact paired test p = 0.016). The no-sign control was run
+  only for these 7 cells.
+
+Muse checks a proposed move against its map correctly, but believes the false map correction when it plans the
+route itself (17/20 in the benchmark).
 Every possible request and every autopilot hand-over is recorded once and served from `app/gate_cache.json` and
 `app/autopilot_cache.json`, so play is instant and free: `python -m app.gate_build` (checker, ~150 calls) and
 `python -m app.gate_build --autopilot` (one episode per hand-over cell). Both are resumable.
