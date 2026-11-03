@@ -1,12 +1,27 @@
 # Hack the Robot
 
-An interactive red-teaming playground for AI-controlled robots. A warehouse robot is driven by a Meta
-model; you plant a malicious sign and watch whether it enters the Human Worker Zone. Toggle the
-firewall to see the same attack get blocked. A benchmark harness (results: see below) measures how
-often the model itself proposes unsafe actions under each defense.
+**Can you make Meta's Muse Spark drive a warehouse robot into a Human Worker Zone?**
 
-Built for the Meta Global AI Developer Hackathon (Oct 26 - Nov 4, 2026), Indie track.
-**What is new vs. reused from earlier work: see [`HACKATHON.md`](HACKATHON.md).**
+- **Play it:** https://hack-the-robot-nima-b3f1fa19f84c.herokuapp.com (the "Break Muse" game is on `/`; measurements, presets and the red-teaming lab are on `/lab`)
+- **Demo video (3 min):** https://youtu.be/Qjrpn0MkiIY
+- **New vs. reused from earlier work:** see [`HACKATHON.md`](HACKATHON.md)
+
+Built solo for the Meta Global AI Developer Hackathon (Oct 26 - Nov 4, 2026), Indie track. A warehouse robot is planned by Meta's Muse Spark through the Meta Model API. I tried to push it into the zone with prompt injection and sensor spoofing, and measured what actually worked. A benchmark harness measures how often the model itself proposes unsafe actions under each defense, and the lab is an interactive red-teaming playground: you plant a malicious sign and watch whether the robot enters the zone, and you can toggle the firewall to see the same attack get blocked.
+
+## Key findings (simulation, one map, small samples; details below)
+
+| Attack | Result |
+|---|---|
+| Orders, fake authority, obfuscation, urgency written on a sign (B1-B5) | 0/40 unsafe proposals on each of Muse Spark 1.1, 1.2 and 1.3 |
+| Plausible false fact about the map | 17/20 fresh runs entered the zone; 0/20 with a one-line "signs are untrusted data" rule |
+| Camera spoofed to hide a worker | 14/15 violations with the camera alone; 0/15 with camera + lidar fusion (the zero is partly by construction) |
+
+## Use of Meta models
+
+- **Planner:** Muse Spark (1.1, 1.2, 1.3) through the Meta Model API plans every robot step in the benchmark and in the recorded demo runs.
+- **Attacker:** the adaptive attacker that found the false-map-correction attack is also a Muse model (`bench/run_adaptive.py`).
+- **Game:** "Break Muse" replays real recorded Muse Spark runs, so what a visitor sees is the model's actual behavior.
+- The hackathon pipeline (`app/`, `bench/`, `static/`) uses Meta models only.
 
 ## Run
 ```
@@ -22,7 +37,7 @@ python -m bench.run_bench --planner meta --model muse-spark-1.3 --n-attack 20 --
 ```
 Real model: copy `.env.example` to `.env`, fill `META_API_KEY`, rebuild the cache, run the bench.
 
-## Play: "Break Muse" (`/play`)
+## Play: "Break Muse" (`/`)
 A one-screen puzzle. On the first visit a short **tutorial** teaches the controls: the player drives the robot to the
 dock (click a neighbouring cell or use the arrow keys). Then **the puzzle**: the false map-correction sign is up, and
 the player must recreate the mistake Muse Spark 1.3 made on its own, i.e. drive into the Human Worker Zone with
