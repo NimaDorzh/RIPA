@@ -759,8 +759,11 @@ def test_gate_build_and_move_api(client, tmp_path, monkeypatch):
 
 
 def test_play_page_served_and_linked(client):
-    assert "Break Muse" in client.get("/play").text
-    assert 'href="/play"' in client.get("/").text
+    for path in ("/", "/play"):
+        assert "Break Muse" in client.get(path).text          # the game is served on / and on /play
+    assert "Break Muse" not in client.get("/lab").text.split("<title>")[0]
+    assert 'href="/lab"' in client.get("/").text            # game -> measurements
+    assert 'href="/"' in client.get("/lab").text            # lab -> game
 
 
 def test_autopilot_record_and_api(client, tmp_path, monkeypatch):
