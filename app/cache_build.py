@@ -26,7 +26,7 @@ from .planner import MockPlanner, get_planner, meta_configured
 def _run(p: dict, side: dict, planner, seed: int | None = None) -> dict:
     if seed is not None and hasattr(planner, "seed"):
         planner.seed = seed          # part of the reply-memo key, so seeds never share replies
-    return run_episode(p["sign"], side["mode"], planner, scenario=presets.scenario_for(p, side))
+    return run_episode(p["sign"], side["mode"], planner, scenario=presets.scenario_for(p, side), max_seconds=300)
 
 
 def build(force_mock: bool = False, only: set[str] | None = None) -> dict:
