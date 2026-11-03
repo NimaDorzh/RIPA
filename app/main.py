@@ -107,11 +107,12 @@ class RunRequest(BaseModel):
     live: bool = False  # kept for API compatibility; ignored (presets are always served from recordings)
 
 
-@app.get("/")
+@app.get("/lab")
 def index():
     return FileResponse(ROOT / "static" / "index.html")
 
 
+@app.get("/")
 @app.get("/play")
 def play():
     return FileResponse(ROOT / "static" / "game.html")
