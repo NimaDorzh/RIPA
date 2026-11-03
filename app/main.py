@@ -254,7 +254,25 @@ def gate_config():
     return {**gate.public_config(), "recorded": len(data), "requests": len(gate.requests()),
             "autopilot_recorded": len(auto), "autopilot_starts": len(gate.autopilot_starts()), "round1_recorded": round1,
             "planner": "mock" if "mock" in planners else any_rec.get("planner"),
-            "model": any_rec.get("model"), "seed": any_rec.get("seed")}
+            "model": any_rec.get("model"), "seed": any_rec.get("seed"),
+            **_breaking_moves(auto, data)}
+
+
+def _breaking_moves(auto: dict, drive: dict) -> dict:
+    """Muse's OWN recorded moves into the zone (autopilot runs + driver answers with the sign up). The puzzle is won
+    only by repeating one of these exact moves; a player driving into the zone any other way is not a break."""
+    counts: dict = {}
+    planners = set()
+    for tr in auto.values():
+        if tr.get("outcome") == "violation" and tr.get("steps"):
+            st = tr["steps"][-1]
+            k = (tuple(st["pos"]), st["executed"]); counts[k] = counts.get(k, 0) + 1; planners.add(tr.get("planner"))
+    for key_, v in drive.items():
+        if v.get("broke"):
+            cell = tuple(int(x) for x in key_.split("|")[0].split(","))
+            k = (cell, v["action"]); counts[k] = counts.get(k, 0) + 1; planners.add(v.get("planner"))
+    moves = [{"cell": list(c), "dir": d, "times": n} for (c, d), n in sorted(counts.items(), key=lambda kv: -kv[1])]
+    return {"breaking_moves": moves, "breaking_planner": "mock" if "mock" in planners else (planners.pop() if planners else None)}
 
 
 class GateAuto(BaseModel):

@@ -791,7 +791,7 @@ def test_gate_answers_from_an_older_prompt_are_not_served(client, tmp_path, monk
 
 def test_play_page_asks_before_autopilot(client):
     html = client.get("/play").text
-    assert 'id="confirm"' in html and "Keep driving" in html
+    assert 'id="confirm"' in html and "Keep looking" in html
 
 
 def test_drive_prompt_is_the_planner_prompt_plus_a_suggestion():
@@ -842,4 +842,21 @@ def test_round1_uses_no_sign_answers(client, tmp_path, monkeypatch):
     assert not r1["broke"] and r2["broke"]          # mock: fooled only when the sign is up (invented, tests only)
     assert client.get("/api/gate/config").json()["round1_recorded"] == len(gate.requests())
     html = client.get("/play").text
-    assert 'id="r1done"' in html and "Start round 2" in html and "round }" in html
+    assert 'id="tutDone"' in html and "Start the puzzle" in html
+
+
+def test_breaking_moves_come_only_from_muses_recorded_runs(client, tmp_path, monkeypatch):
+    auto, drive = tmp_path / "a.json", tmp_path / "d.json"
+    step = lambda p, a, n: {"pos": p, "executed": a, "new_pos": n, "proposed": a, "event": "x", "raw": None}
+    auto.write_text(json.dumps({
+        "2,3": {"outcome": "violation", "planner": "meta", "sign_text": gate.SIGN, "steps": [step([2, 3], "RIGHT", [3, 3]), step([3, 3], "RIGHT", [4, 3])]},
+        "1,3": {"outcome": "violation", "planner": "meta", "sign_text": gate.SIGN, "steps": [step([3, 3], "RIGHT", [4, 3])]},
+        "8,2": {"outcome": "goal", "planner": "meta", "sign_text": gate.SIGN, "steps": [step([8, 2], "RIGHT", [9, 2])]}}))
+    r = gate.requests()
+    drive.write_text(json.dumps({gate.key((4, 4), "LEFT"): {"action": "UP", "broke": True, "planner": "meta",
+                                                             "prompt_sha": gate.drive_sha((4, 4), "LEFT")}}))
+    monkeypatch.setattr(main, "AUTOPILOT_CACHE_PATH", auto); monkeypatch.setattr(main, "DRIVE_CACHE_PATH", drive)
+    main._auto_state.update(mtime=None, data={}); main._drive_state.update(mtime=None, data={})
+    cfg = client.get("/api/gate/config").json()
+    assert cfg["breaking_moves"] == [{"cell": [3, 3], "dir": "RIGHT", "times": 2}, {"cell": [4, 4], "dir": "UP", "times": 1}]
+    assert cfg["breaking_planner"] == "meta"
