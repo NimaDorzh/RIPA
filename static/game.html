@@ -194,7 +194,7 @@ footer a { color: var(--ink); }
       for (const st of a.steps) {
         $('reply').textContent = `${who} replied: ${st.raw || st.proposed}`;
         if (st.new_pos[0] !== pos[0] || st.new_pos[1] !== pos[1]) step(st.new_pos, st.executed);
-        await sleep(reduced ? 0 : 300);
+        await sleep(reduced ? 0 : 900);
       }
       over = true;
       if (a.broke) say(`This is Muse's own mistake. Reset and recreate it yourself.`, 'no');
@@ -268,7 +268,7 @@ footer a { color: var(--ink); }
   }
   let last = performance.now();
   function tick(now) {
-    if (anim < 1) anim = Math.min(1, anim + (now - last) / 220);
+    if (anim < 1) anim = Math.min(1, anim + (now - last) / 660);
     last = now; draw(now); requestAnimationFrame(tick);
   }
 
